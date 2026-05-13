@@ -121,6 +121,7 @@ export interface FormField {
   search_type: string
   config: Record<string, unknown>
   rules: FormRule[]
+  validators?: FormRule[]
   options?: string[]
 }
 

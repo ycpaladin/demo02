@@ -58,7 +58,7 @@ const restore = async (id: string, type: string, listId?: string) => {
 }
 
 const forceDelete = async (id: string, type: string, listId?: string) => {
-  await permanentDelete(appId, id, { params: { type, list_id: listId } })
+  await permanentDelete(appId, id, { type, list_id: listId })
   ElMessage.success('已彻底删除')
   items.value = await getTrash(appId)
 }

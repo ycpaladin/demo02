@@ -6,6 +6,7 @@ import App from './App.vue'
 import router from './router'
 
 const app = createApp(App)
-app.use(ElementPlus, { locale: zhCn })
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use(ElementPlus, { locale: zhCn as any })
 app.use(router)
 app.mount('#app')

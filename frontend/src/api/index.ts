@@ -7,11 +7,11 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.response.use(
   (res) => {
-    const data: unknown = res.data
+    const data = res.data
     if (data && typeof data === 'object' && 'count' in data && 'results' in data) {
-      return (data as { results: unknown }).results
+      return (data as Record<string, unknown>).results as typeof res
     }
-    return data
+    return res
   },
   (err) => {
     const data = err.response?.data

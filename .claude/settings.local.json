@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(pip install *)",
+      "Bash(python manage.py check --database default)",
+      "Bash(echo 'from django.urls import path *)",
+      "Bash(python manage.py makemigrations core)",
+      "Bash(python manage.py migrate core)",
+      "Bash(python -c ' *)",
+      "Bash(python manage.py makemigrations core --name initial --verbosity 3)",
+      "Bash(ping *)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('core/models.py', doraise=True\\); print\\('models.py: OK'\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('core/migrations/0001_initial.py', doraise=True\\); print\\('migration 0001_initial.py: OK'\\)\")",
+      "Bash(python *)",
+      "Bash(DJANGO_SETTINGS_MODULE=config.settings python -c \"from data.table_builder import DynamicTableBuilder; from data.query_builder import QueryBuilder; from data.serializer_factory import SerializerFactory; from data.views import DynamicRecordView, DynamicRecordDetailView, DynamicRecordBatchView; from data.trash import TrashView; print\\('OK'\\)\")",
+      "Bash(npm install *)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(taskkill //F //PID 21640)",
+      "Bash(taskkill //F //PID 21620)",
+      "Bash(taskkill //F //PID 6108)",
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(curl -s http://localhost:8000/api/apps/)",
+      "Bash(tasklist)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8080\")",
+      "Bash(curl *)",
+      "Bash(npx vue-tsc *)"
+    ]
+  }
+}

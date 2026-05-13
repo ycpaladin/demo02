@@ -51,6 +51,7 @@ const views = ref<ListView[]>([])
 const activeView = ref('default')
 const selectedIds = ref<string[]>([])
 const showBatchEdit = ref(false)
+const showAddView = ref(false)
 
 const searchableFields = computed(() => allFields.value.filter(f => f.searchable))
 const visibleColumns = computed(() => {

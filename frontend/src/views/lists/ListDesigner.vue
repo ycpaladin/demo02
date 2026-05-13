@@ -48,7 +48,7 @@ const listId = route.params.listId as string
 const fields = ref<ListField[]>([])
 const fieldTypes = ref<FieldType[]>([])
 const showAdd = ref(false)
-const fieldForm = ref({ name: '', key: '', field_type: null as string | null, required: false, searchable: false })
+const fieldForm = ref({ name: '', key: '', field_type: '' as string, required: false, searchable: false })
 
 onMounted(async () => {
   fields.value = await getListFields(listId)
@@ -59,7 +59,7 @@ const handleAddField = async () => {
   await createListField(listId, fieldForm.value)
   ElMessage.success('添加成功')
   showAdd.value = false
-  fieldForm.value = { name: '', key: '', field_type: null as string | null, required: false, searchable: false }
+  fieldForm.value = { name: '', key: '', field_type: '' as string, required: false, searchable: false }
   fields.value = await getListFields(listId)
 }
 

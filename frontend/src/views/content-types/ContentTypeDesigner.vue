@@ -46,7 +46,7 @@ const ctId = route.params.ctId as string
 const fields = ref<ContentTypeField[]>([])
 const fieldTypes = ref<FieldType[]>([])
 const showAdd = ref(false)
-const fieldForm = ref({ name: '', key: '', field_type: null as string | null, required: false })
+const fieldForm = ref({ name: '', key: '', field_type: '' as string, required: false })
 
 onMounted(async () => {
   fields.value = await getCTFields(ctId)
@@ -57,7 +57,7 @@ const handleAddField = async () => {
   await createCTField(ctId, fieldForm.value)
   ElMessage.success('添加成功')
   showAdd.value = false
-  fieldForm.value = { name: '', key: '', field_type: null as string | null, required: false }
+  fieldForm.value = { name: '', key: '', field_type: '' as string, required: false }
   fields.value = await getCTFields(ctId)
 }
 
