@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/apps' },
   { path: '/apps', name: 'apps', component: () => import('../views/applications/AppList.vue') },
   { path: '/apps/:appId/field-types', name: 'fieldTypes', component: () => import('../views/field-types/FieldTypeList.vue') },
