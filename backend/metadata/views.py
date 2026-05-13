@@ -1,0 +1,108 @@
+from datetime import datetime
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from metadata.models import ContentType, ContentTypeField, List, ListField, ListView
+from metadata.serializers import (
+    ContentTypeSerializer, ContentTypeFieldSerializer,
+    ListSerializer, ListFieldSerializer, ListViewSerializer,
+)
+
+
+class ContentTypeViewSet(viewsets.ModelViewSet):
+    queryset = ContentType.objects.all()
+    serializer_class = ContentTypeSerializer
+
+
+class ContentTypeFieldViewSet(viewsets.ModelViewSet):
+    serializer_class = ContentTypeFieldSerializer
+
+    def get_queryset(self):
+        return ContentTypeField.objects.filter(content_type_id=self.kwargs['ct_id'])
+
+    def perform_create(self, serializer):
+        serializer.save(content_type_id=self.kwargs['ct_id'])
+
+
+class ListViewSet(viewsets.ModelViewSet):
+    serializer_class = ListSerializer
+
+    def get_queryset(self):
+        return List.objects.filter(application_id=self.kwargs['app_id'], is_deleted=False)
+
+    def perform_create(self, serializer):
+        app_id = self.kwargs['app_id']
+        count = List.objects.filter(application_id=app_id).count()
+        default_url = f'/list{count + 1}'
+        instance = serializer.save(
+            application_id=app_id,
+            table_name=f"dyn_{serializer.validated_data['key']}",
+            url=serializer.validated_data.get('url') or default_url,
+        )
+        # Use raw SQL to create the dynamic table
+        from django.db import connection
+        table_name = instance.table_name
+        sql = f"""
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table_name}' AND xtype='U')
+        BEGIN
+            CREATE TABLE [{table_name}] (
+                id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+                data NVARCHAR(MAX) NOT NULL,
+                created_at DATETIME2 DEFAULT GETDATE(),
+                updated_at DATETIME2 DEFAULT GETDATE()
+            )
+        END
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql)
+
+    def perform_destroy(self, instance):
+        instance.is_deleted = True
+        instance.deleted_at = datetime.now()
+        instance.save(update_fields=['is_deleted', 'deleted_at'])
+
+    @action(detail=True, methods=['get'])
+    def form_schema(self, request, app_id=None, pk=None):
+        lst = self.get_object()
+        fields = lst.get_all_fields()
+        from core.models import FieldValidator
+        validators = {v.key: v for v in FieldValidator.objects.all()}
+        from core.validation import ValidationEngine
+
+        schema = {'list_id': str(lst.id), 'list_name': lst.name, 'fields': []}
+        for f in fields:
+            field_data = {
+                'key': f['key'],
+                'name': f['name'],
+                'field_type': f['field_type__key'],
+                'required': f['required'],
+                'unique': f['unique'],
+                'searchable': f.get('searchable', False),
+                'search_type': f.get('search_type', ''),
+                'config': f['config'],
+                'rules': ValidationEngine.build_frontend_rules(f, validators),
+            }
+            if f['field_type__key'] in ('select', 'multi_select'):
+                field_data['options'] = f['config'].get('options', [])
+            schema['fields'].append(field_data)
+        return Response(schema)
+
+
+class ListFieldViewSet(viewsets.ModelViewSet):
+    serializer_class = ListFieldSerializer
+
+    def get_queryset(self):
+        return ListField.objects.filter(list_id=self.kwargs['list_id'])
+
+    def perform_create(self, serializer):
+        serializer.save(list_id=self.kwargs['list_id'])
+
+
+class ListViewViewSet(viewsets.ModelViewSet):
+    serializer_class = ListViewSerializer
+
+    def get_queryset(self):
+        return ListView.objects.filter(list_id=self.kwargs['list_id'])
+
+    def perform_create(self, serializer):
+        serializer.save(list_id=self.kwargs['list_id'])
