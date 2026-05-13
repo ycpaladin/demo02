@@ -32,20 +32,21 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getCTFields, createCTField, deleteCTField } from '../../api/contentTypes'
 import { getFieldTypes } from '../../api/fieldTypes'
 import AppLayout from '../../components/AppLayout.vue'
 import { ElMessage } from 'element-plus'
+import type { ContentTypeField, FieldType } from '../../types'
 
 const route = useRoute()
-const ctId = route.params.ctId
-const fields = ref([])
-const fieldTypes = ref([])
+const ctId = route.params.ctId as string
+const fields = ref<ContentTypeField[]>([])
+const fieldTypes = ref<FieldType[]>([])
 const showAdd = ref(false)
-const fieldForm = ref({ name: '', key: '', field_type: null, required: false })
+const fieldForm = ref({ name: '', key: '', field_type: null as string | null, required: false })
 
 onMounted(async () => {
   fields.value = await getCTFields(ctId)
@@ -56,11 +57,11 @@ const handleAddField = async () => {
   await createCTField(ctId, fieldForm.value)
   ElMessage.success('添加成功')
   showAdd.value = false
-  fieldForm.value = { name: '', key: '', field_type: null, required: false }
+  fieldForm.value = { name: '', key: '', field_type: null as string | null, required: false }
   fields.value = await getCTFields(ctId)
 }
 
-const handleDeleteField = async (id) => {
+const handleDeleteField = async (id: string) => {
   await deleteCTField(ctId, id)
   ElMessage.success('已删除')
   fields.value = await getCTFields(ctId)

@@ -14,10 +14,16 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  views: { type: Array, default: () => [] },
-  activeKey: { type: String, default: 'default' },
-})
-defineEmits(['change', 'add'])
+<script setup lang="ts">
+import type { ListView } from '../types'
+
+defineProps<{
+  views: ListView[]
+  activeKey: string
+}>()
+
+defineEmits<{
+  change: [key: string]
+  add: []
+}>()
 </script>

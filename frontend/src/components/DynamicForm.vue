@@ -47,18 +47,20 @@
   </el-form>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 import { buildRules } from '../utils/ruleEngine'
+import type { FormField } from '../types'
+import type { FormInstance } from 'element-plus'
 
-const props = defineProps({
-  fields: { type: Array, default: () => [] },
-  initialData: { type: Object, default: () => ({}) },
-})
+const props = defineProps<{
+  fields: FormField[]
+  initialData: Record<string, unknown>
+}>()
 
-const formRef = ref(null)
-const formData = reactive({ ...props.initialData })
-const formRules = reactive({})
+const formRef = ref<FormInstance>()
+const formData = reactive<Record<string, unknown>>({ ...props.initialData })
+const formRules = reactive<Record<string, unknown>>({})
 
 watch(() => props.fields, (fields) => {
   for (const f of fields) {
@@ -69,7 +71,7 @@ watch(() => props.fields, (fields) => {
   }
 }, { immediate: true })
 
-const validate = () => formRef.value?.validate()
-const getData = () => ({ ...formData })
+const validate = (): Promise<boolean> | undefined => formRef.value?.validate()
+const getData = (): Record<string, unknown> => ({ ...formData })
 defineExpose({ validate, getData })
-</script>
+

@@ -34,20 +34,21 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getListFields, createListField, deleteListField } from '../../api/lists'
 import { getFieldTypes } from '../../api/fieldTypes'
 import AppLayout from '../../components/AppLayout.vue'
 import { ElMessage } from 'element-plus'
+import type { ListField, FieldType } from '../../types'
 
 const route = useRoute()
-const listId = route.params.listId
-const fields = ref([])
-const fieldTypes = ref([])
+const listId = route.params.listId as string
+const fields = ref<ListField[]>([])
+const fieldTypes = ref<FieldType[]>([])
 const showAdd = ref(false)
-const fieldForm = ref({ name: '', key: '', field_type: null, required: false, searchable: false })
+const fieldForm = ref({ name: '', key: '', field_type: null as string | null, required: false, searchable: false })
 
 onMounted(async () => {
   fields.value = await getListFields(listId)
@@ -58,11 +59,11 @@ const handleAddField = async () => {
   await createListField(listId, fieldForm.value)
   ElMessage.success('添加成功')
   showAdd.value = false
-  fieldForm.value = { name: '', key: '', field_type: null, required: false, searchable: false }
+  fieldForm.value = { name: '', key: '', field_type: null as string | null, required: false, searchable: false }
   fields.value = await getListFields(listId)
 }
 
-const handleDeleteField = async (id) => {
+const handleDeleteField = async (id: string) => {
   await deleteListField(listId, id)
   ElMessage.success('已删除')
   fields.value = await getListFields(listId)

@@ -27,14 +27,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getApps, createApp } from '../../api/applications'
 import { ElMessage } from 'element-plus'
+import type { Application } from '../../types'
 
-const apps = ref([])
+const apps = ref<Application[]>([])
 const showCreate = ref(false)
-const form = ref({ name: '', key: '', url_prefix: '/', description: '' })
+const form = ref<Partial<Application>>({ name: '', key: '', url_prefix: '/', description: '' })
 
 onMounted(async () => { apps.value = await getApps() })
 const handleCreate = async () => {

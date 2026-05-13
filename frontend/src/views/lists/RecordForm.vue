@@ -11,7 +11,7 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getFormSchema } from '../../api/lists'
@@ -19,42 +19,43 @@ import { getRecord, createRecord, updateRecord } from '../../api/records'
 import AppLayout from '../../components/AppLayout.vue'
 import DynamicForm from '../../components/DynamicForm.vue'
 import { ElMessage } from 'element-plus'
+import type { FormField } from '../../types'
 
 const route = useRoute()
 const router = useRouter()
-const appId = route.params.appId
-const listId = route.params.listId
-const recordId = route.params.recordId
+const appId = route.params.appId as string
+const listId = route.params.listId as string
+const recordId = route.params.recordId as string | undefined
 const isEdit = computed(() => !!recordId)
 
-const fields = ref([])
-const initialData = ref({})
-const formRef = ref(null)
+const fields = ref<FormField[]>([])
+const initialData = ref<Record<string, unknown>>({})
+const formRef = ref<InstanceType<typeof DynamicForm>>()
 const submitting = ref(false)
 
 onMounted(async () => {
   const schema = await getFormSchema(appId, listId)
   fields.value = schema.fields
   if (isEdit.value) {
-    const record = await getRecord(appId, listId, recordId)
+    const record = await getRecord(appId, listId, recordId!)
     initialData.value = record.data || {}
   }
 })
 
 const submit = async () => {
-  try { await formRef.value.validate() } catch { return }
+  try { await formRef.value!.validate() } catch { return }
   submitting.value = true
   try {
-    const data = formRef.value.getData()
+    const data = formRef.value!.getData()
     if (isEdit.value) {
-      await updateRecord(appId, listId, recordId, data)
+      await updateRecord(appId, listId, recordId!, data)
     } else {
       await createRecord(appId, listId, data)
     }
     ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
     router.push(`/apps/${appId}/lists/${listId}/data`)
-  } catch (e) {
-    ElMessage.error(e.message)
+  } catch (e: unknown) {
+    ElMessage.error((e as Error).message)
   } finally {
     submitting.value = false
   }

@@ -25,7 +25,7 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getListViews, createListView, getFormSchema } from '../../api/lists'
@@ -34,28 +34,29 @@ import AppLayout from '../../components/AppLayout.vue'
 import ViewTabs from '../../components/ViewTabs.vue'
 import DynamicSearchBar from '../../components/DynamicSearchBar.vue'
 import { ElMessage } from 'element-plus'
+import type { FormField, ListView, RecordItem } from '../../types'
 
 const route = useRoute()
-const appId = route.params.appId
-const listId = route.params.listId
+const appId = route.params.appId as string
+const listId = route.params.listId as string
 
 const loading = ref(true)
-const allFields = ref([])
-const records = ref([])
+const allFields = ref<FormField[]>([])
+const records = ref<RecordItem[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 const filterStr = ref('')
-const views = ref([])
+const views = ref<ListView[]>([])
 const activeView = ref('default')
-const selectedIds = ref([])
+const selectedIds = ref<string[]>([])
 const showBatchEdit = ref(false)
 
 const searchableFields = computed(() => allFields.value.filter(f => f.searchable))
 const visibleColumns = computed(() => {
   const cv = views.value.find(v => v.url_key === activeView.value)
   if (cv?.config?.visible_fields?.length) {
-    return allFields.value.filter(f => cv.config.visible_fields.includes(f.key))
+    return allFields.value.filter(f => cv.config.visible_fields!.includes(f.key))
   }
   return allFields.value
 })
@@ -63,7 +64,7 @@ const visibleColumns = computed(() => {
 const loadData = async () => {
   loading.value = true
   try {
-    const params = { page: page.value, page_size: pageSize.value }
+    const params: Record<string, unknown> = { page: page.value, page_size: pageSize.value }
     if (filterStr.value) params.filter = filterStr.value
     if (activeView.value) params.view = activeView.value
     const res = await getRecords(appId, listId, params)
@@ -82,9 +83,9 @@ onMounted(async () => {
   await loadData()
 })
 
-const onSearch = (f) => { filterStr.value = f; page.value = 1; loadData() }
+const onSearch = (f: string) => { filterStr.value = f; page.value = 1; loadData() }
 const resetSearch = () => { filterStr.value = ''; page.value = 1; loadData() }
-const switchView = (key) => { activeView.value = key; loadData() }
-const onSelection = (rows) => { selectedIds.value = rows.map(r => r.id) }
-const handleDelete = async (id) => { await deleteRecord(appId, listId, id); loadData() }
+const switchView = (key: string) => { activeView.value = key; loadData() }
+const onSelection = (rows: RecordItem[]) => { selectedIds.value = rows.map(r => r.id) }
+const handleDelete = async (id: string) => { await deleteRecord(appId, listId, id); loadData() }
 </script>

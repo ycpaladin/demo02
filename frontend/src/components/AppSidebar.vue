@@ -33,10 +33,10 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { List, Document, Setting, Menu, Delete } from '@element-plus/icons-vue'
 
 const route = useRoute()
-const appId = route.params.appId
+const appId = route.params.appId as string
 </script>

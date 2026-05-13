@@ -36,14 +36,15 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getFieldTypes, deleteFieldType, createFieldType, getValidators } from '../../api/fieldTypes'
 import AppLayout from '../../components/AppLayout.vue'
 import { ElMessage } from 'element-plus'
+import type { FieldType, FieldValidator } from '../../types'
 
-const types = ref([])
-const validators = ref([])
+const types = ref<FieldType[]>([])
+const validators = ref<FieldValidator[]>([])
 const showCreate = ref(false)
 const form = ref({ name: '', key: '', description: '' })
 
@@ -59,7 +60,7 @@ const handleCreate = async () => {
   types.value = await getFieldTypes()
 }
 
-const handleDelete = async (id) => {
+const handleDelete = async (id: string) => {
   await deleteFieldType(id)
   ElMessage.success('已删除')
   types.value = await getFieldTypes()

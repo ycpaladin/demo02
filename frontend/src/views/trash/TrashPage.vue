@@ -34,29 +34,30 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getTrash, restoreItem, permanentDelete } from '../../api/trash'
 import AppLayout from '../../components/AppLayout.vue'
 import { ElMessage } from 'element-plus'
+import type { TrashItem } from '../../types'
 
 const route = useRoute()
-const appId = route.params.appId
+const appId = route.params.appId as string
 const activeTab = ref('lists')
-const items = ref([])
+const items = ref<TrashItem[]>([])
 const deletedLists = computed(() => items.value.filter(i => i.type === 'list'))
 const deletedRecords = computed(() => items.value.filter(i => i.type === 'record'))
 
 onMounted(async () => { items.value = await getTrash(appId) })
 
-const restore = async (id, type, listId) => {
+const restore = async (id: string, type: string, listId?: string) => {
   await restoreItem(appId, id, { type, list_id: listId })
   ElMessage.success('已恢复')
   items.value = await getTrash(appId)
 }
 
-const forceDelete = async (id, type, listId) => {
+const forceDelete = async (id: string, type: string, listId?: string) => {
   await permanentDelete(appId, id, { params: { type, list_id: listId } })
   ElMessage.success('已彻底删除')
   items.value = await getTrash(appId)

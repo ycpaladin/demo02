@@ -33,18 +33,19 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getContentTypes, createContentType, deleteContentType } from '../../api/contentTypes'
 import AppLayout from '../../components/AppLayout.vue'
 import { ElMessage } from 'element-plus'
+import type { ContentType } from '../../types'
 
 const route = useRoute()
-const appId = route.params.appId
-const types = ref([])
+const appId = route.params.appId as string
+const types = ref<ContentType[]>([])
 const showCreate = ref(false)
-const form = ref({ name: '', key: '', description: '', parent: null })
+const form = ref<Partial<ContentType>>({ name: '', key: '', description: '', parent: null })
 
 onMounted(async () => { types.value = await getContentTypes() })
 
@@ -56,7 +57,7 @@ const handleCreate = async () => {
   form.value = { name: '', key: '', description: '', parent: null }
 }
 
-const handleDelete = async (id) => {
+const handleDelete = async (id: string) => {
   await deleteContentType(id)
   ElMessage.success('已删除')
   types.value = await getContentTypes()

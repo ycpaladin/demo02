@@ -36,20 +36,21 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getLists, createList, deleteList } from '../../api/lists'
 import { getContentTypes } from '../../api/contentTypes'
 import AppLayout from '../../components/AppLayout.vue'
 import { ElMessage } from 'element-plus'
+import type { ListModel, ContentType } from '../../types'
 
 const route = useRoute()
-const appId = route.params.appId
-const lists = ref([])
-const contentTypes = ref([])
+const appId = route.params.appId as string
+const lists = ref<ListModel[]>([])
+const contentTypes = ref<ContentType[]>([])
 const showCreate = ref(false)
-const form = ref({ name: '', key: '', url: '', description: '', content_type: null })
+const form = ref<Partial<ListModel>>({ name: '', key: '', url: '', description: '', content_type: null })
 
 const defaultUrl = computed(() => `/list${lists.value.length + 1}`)
 
@@ -66,7 +67,7 @@ const handleCreate = async () => {
   form.value = { name: '', key: '', url: '', description: '', content_type: null }
 }
 
-const handleDelete = async (id) => {
+const handleDelete = async (id: string) => {
   await deleteList(appId, id)
   ElMessage.success('已移至回收站')
   lists.value = await getLists(appId)

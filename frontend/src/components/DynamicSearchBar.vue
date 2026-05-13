@@ -18,15 +18,20 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { reactive } from 'vue'
+import type { FormField } from '../types'
 
-const props = defineProps({ searchableFields: { type: Array, default: () => [] } })
-const emit = defineEmits(['search', 'reset'])
-const filters = reactive({})
+const props = defineProps<{ searchableFields: FormField[] }>()
+const emit = defineEmits<{
+  search: [filter: string]
+  reset: []
+}>()
+
+const filters = reactive<Record<string, string>>({})
 
 const emitSearch = () => {
-  const parts = []
+  const parts: string[] = []
   for (const [k, v] of Object.entries(filters)) {
     if (v !== '' && v !== null && v !== undefined) {
       const field = props.searchableFields.find(f => f.key === k)
