@@ -8,7 +8,7 @@
         <h3 style="margin:0;">通用列表系统</h3>
       </el-header>
       <el-main>
-        <router-view />
+        <slot />
       </el-main>
     </el-container>
   </el-container>

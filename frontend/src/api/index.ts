@@ -5,13 +5,14 @@ const api: AxiosInstance = axios.create({
   timeout: 30000,
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 api.interceptors.response.use(
-  (res) => {
+  (res: any) => {
     const data = res.data
     if (data && typeof data === 'object' && 'count' in data && 'results' in data) {
-      return (data as Record<string, unknown>).results as typeof res
+      return data.results
     }
-    return res
+    return data
   },
   (err) => {
     const data = err.response?.data

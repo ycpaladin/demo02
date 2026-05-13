@@ -75,3 +75,4 @@ const validate = (): Promise<boolean> | undefined => formRef.value?.validate()
 const getData = (): Record<string, unknown> => ({ ...formData })
 defineExpose({ validate, getData })
 
+</script>
