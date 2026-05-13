@@ -65,10 +65,11 @@ class QueryBuilder:
         else:
             where = deleted_filter
 
-        order_clause = ''
+        direction = 'DESC' if order.lower() == 'desc' else 'ASC'
         if sort:
-            direction = 'DESC' if order.lower() == 'desc' else 'ASC'
             order_clause = f"ORDER BY JSON_VALUE(data, '$.{sort}') {direction}"
+        else:
+            order_clause = f"ORDER BY id ASC"
 
         offset = (page - 1) * page_size
 

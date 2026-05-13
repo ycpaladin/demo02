@@ -14,6 +14,7 @@ urlpatterns = [
     path('content-types/<uuid:ct_id>/fields/<uuid:pk>/', ContentTypeFieldViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'})),
     path('apps/<uuid:app_id>/lists/', ListViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('apps/<uuid:app_id>/lists/<uuid:pk>/', ListViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'})),
+    path('apps/<uuid:app_id>/lists/<uuid:pk>/form_schema/', ListViewSet.as_view({'get': 'form_schema'})),
     path('lists/<uuid:list_id>/fields/', ListFieldViewSet.as_view({'get': 'list', 'post': 'create'})),
     path('lists/<uuid:list_id>/fields/<uuid:pk>/', ListFieldViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'})),
     path('lists/<uuid:list_id>/views/', ListViewViewSet.as_view({'get': 'list', 'post': 'create'})),
