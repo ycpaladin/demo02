@@ -32,12 +32,9 @@ class ListViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         app_id = self.kwargs['app_id']
-        count = List.objects.filter(application_id=app_id).count()
-        default_url = f'/list{count + 1}'
         instance = serializer.save(
             application_id=app_id,
             table_name=f"dyn_{serializer.validated_data['key']}",
-            url=serializer.validated_data.get('url') or default_url,
         )
         # Use raw SQL to create the dynamic table
         from django.db import connection

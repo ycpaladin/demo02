@@ -5,7 +5,6 @@
     <el-table :data="apps" style="margin-top:16px;">
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="key" label="标识" />
-      <el-table-column prop="url_prefix" label="URL前缀" />
       <el-table-column label="操作">
         <template #default="{ row }">
           <el-button link type="primary" @click="$router.push(`/apps/${row.id}/lists`)">进入</el-button>
@@ -16,7 +15,6 @@
       <el-form :model="form">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="标识"><el-input v-model="form.key" /></el-form-item>
-        <el-form-item label="URL前缀"><el-input v-model="form.url_prefix" placeholder="/" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" /></el-form-item>
       </el-form>
       <template #footer>
@@ -35,7 +33,7 @@ import type { Application } from '../../types'
 
 const apps = ref<Application[]>([])
 const showCreate = ref(false)
-const form = ref<Partial<Application>>({ name: '', key: '', url_prefix: '/', description: '' })
+const form = ref<Partial<Application>>({ name: '', key: '', description: '' })
 
 onMounted(async () => { apps.value = await getApps() })
 const handleCreate = async () => {

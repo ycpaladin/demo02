@@ -9,9 +9,6 @@
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" />
         </el-form-item>
-        <el-form-item label="URL">
-          <el-input v-model="form.url" />
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSave" :loading="saving">保存</el-button>
         </el-form-item>
@@ -33,12 +30,12 @@ const router = useRouter()
 const appId = route.params.appId as string
 const listId = route.params.listId as string
 const saving = ref(false)
-const form = ref<Partial<ListModel>>({ name: '', description: '', url: '' })
+const form = ref<Partial<ListModel>>({ name: '', description: '' })
 
 onMounted(async () => {
   try {
     const lst = await getList(appId, listId)
-    form.value = { name: lst.name, description: lst.description, url: lst.url }
+    form.value = { name: lst.name, description: lst.description }
   } catch { /* */ }
 })
 

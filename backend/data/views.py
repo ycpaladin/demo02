@@ -11,16 +11,11 @@ from data.serializer_factory import SerializerFactory
 
 class DynamicRecordView(APIView):
 
-    def _get_list(self, app_id, list_url):
-        from django.db.models import Q
-        return List.objects.get(
-            Q(application_id=app_id),
-            Q(url=list_url) | Q(url='/' + list_url),
-            is_deleted=False,
-        )
+    def _get_list(self, app_id, list_id):
+        return List.objects.get(id=list_id, application_id=app_id, is_deleted=False)
 
-    def get(self, request, app_id, list_url):
-        lst = self._get_list(app_id, list_url)
+    def get(self, request, app_id, list_id):
+        lst = self._get_list(app_id, list_id)
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
         sort = request.query_params.get('sort', '')
@@ -48,8 +43,8 @@ class DynamicRecordView(APIView):
                 row['updated_at'] = row['updated_at'].isoformat()
         return Response(result)
 
-    def post(self, request, app_id, list_url):
-        lst = self._get_list(app_id, list_url)
+    def post(self, request, app_id, list_id):
+        lst = self._get_list(app_id, list_id)
         SerializerClass = SerializerFactory.create_serializer(lst)
         serializer = SerializerClass(data=request.data)
         if not serializer.is_valid():
@@ -59,13 +54,8 @@ class DynamicRecordView(APIView):
 
 
 class DynamicRecordDetailView(APIView):
-    def _get_list(self, app_id, list_url):
-        from django.db.models import Q
-        return List.objects.get(
-            Q(application_id=app_id),
-            Q(url=list_url) | Q(url='/' + list_url),
-            is_deleted=False,
-        )
+    def _get_list(self, app_id, list_id):
+        return List.objects.get(id=list_id, application_id=app_id, is_deleted=False)
 
     def _get_record(self, table_name, record_id):
         with connection.cursor() as cursor:
@@ -85,15 +75,15 @@ class DynamicRecordDetailView(APIView):
                 record['updated_at'] = record['updated_at'].isoformat()
             return record
 
-    def get(self, request, app_id, list_url, record_id):
-        lst = self._get_list(app_id, list_url)
+    def get(self, request, app_id, list_id, record_id):
+        lst = self._get_list(app_id, list_id)
         record = self._get_record(lst.table_name, record_id)
         if not record:
             return Response({'detail': 'Not found'}, status=404)
         return Response(record)
 
-    def put(self, request, app_id, list_url, record_id):
-        lst = self._get_list(app_id, list_url)
+    def put(self, request, app_id, list_id, record_id):
+        lst = self._get_list(app_id, list_id)
         record = self._get_record(lst.table_name, record_id)
         if not record:
             return Response({'detail': 'Not found'}, status=404)
@@ -104,8 +94,8 @@ class DynamicRecordDetailView(APIView):
         updated = serializer.update(record, serializer.validated_data)
         return Response(updated)
 
-    def delete(self, request, app_id, list_url, record_id):
-        lst = self._get_list(app_id, list_url)
+    def delete(self, request, app_id, list_id, record_id):
+        lst = self._get_list(app_id, list_id)
         record = self._get_record(lst.table_name, record_id)
         if not record:
             return Response({'detail': 'Not found'}, status=404)
@@ -121,7 +111,7 @@ class DynamicRecordDetailView(APIView):
 
 
 class DynamicRecordBatchView(APIView):
-    def patch(self, request, app_id, list_url):
+    def patch(self, request, app_id, list_id):
         lst = List.objects.get(application_id=app_id, url=list_url, is_deleted=False)
         record_ids = request.data.get('ids', [])
         field_key = request.data.get('field')

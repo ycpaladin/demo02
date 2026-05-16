@@ -54,7 +54,6 @@ class List(BaseModel):
     key = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=500, blank=True, default='')
     content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
-    url = models.CharField(max_length=200)
     table_name = models.CharField(max_length=200)
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)

@@ -9,8 +9,7 @@
           <template #header>
             <span style="font-weight:bold;">{{ lst.name }}</span>
           </template>
-          <p style="margin:0 0 4px;color:#909399;font-size:13px;">{{ lst.key }}</p>
-          <p style="margin:0 0 8px;color:#606266;font-size:12px;">{{ lst.url }}</p>
+          <p style="margin:0 0 8px;color:#909399;font-size:13px;">{{ lst.key }}</p>
           <el-button size="small" type="primary" @click="router.push(`/apps/${appId}/lists/${lst.id}/data`)">进入</el-button>
         </el-card>
       </div>
@@ -23,8 +22,7 @@
           <template #header>
             <span style="font-weight:bold;">{{ child.name }}</span>
           </template>
-          <p style="margin:0 0 4px;color:#909399;font-size:13px;">{{ child.key }}</p>
-          <p style="margin:0 0 8px;color:#606266;font-size:12px;">{{ child.url_prefix }}</p>
+          <p style="margin:0 0 8px;color:#909399;font-size:13px;">{{ child.key }}</p>
           <el-button size="small" type="primary" @click="router.push(`/apps/${child.id}/lists`)">进入</el-button>
         </el-card>
       </div>

@@ -9,9 +9,6 @@
         <el-form-item label="标识">
           <el-input v-model="form.key" />
         </el-form-item>
-        <el-form-item label="URL前缀">
-          <el-input v-model="form.url_prefix" placeholder="/" />
-        </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" />
         </el-form-item>
@@ -35,12 +32,12 @@ const route = useRoute()
 const router = useRouter()
 const appId = route.params.appId as string
 const saving = ref(false)
-const form = ref<Partial<Application>>({ name: '', key: '', description: '', url_prefix: '/' })
+const form = ref<Partial<Application>>({ name: '', key: '', description: '' })
 
 onMounted(async () => {
   try {
     const app = await getApp(appId)
-    form.value = { name: app.name, key: app.key, description: app.description, url_prefix: app.url_prefix }
+    form.value = { name: app.name, key: app.key, description: app.description }
   } catch { /* */ }
 })
 

@@ -5,7 +5,6 @@
     <el-table :data="lists" style="margin-top:16px;">
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="key" label="标识" />
-      <el-table-column prop="url" label="URL" />
       <el-table-column label="操作">
         <template #default="{ row }">
           <el-button link type="primary" @click="$router.push(`/apps/${appId}/lists/${row.id}/data`)">数据</el-button>
@@ -21,7 +20,6 @@
       <el-form :model="form">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="标识"><el-input v-model="form.key" /></el-form-item>
-        <el-form-item label="URL"><el-input v-model="form.url" :placeholder="defaultUrl" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" /></el-form-item>
         <el-form-item label="内容类型">
           <el-select v-model="form.content_type" placeholder="可选（绑定内容类型）" clearable>
@@ -38,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLists, createList, deleteList } from '../../api/lists'
 import { getContentTypes } from '../../api/contentTypes'
@@ -52,9 +50,7 @@ const appId = route.params.appId as string
 const lists = ref<ListModel[]>([])
 const contentTypes = ref<ContentType[]>([])
 const showCreate = ref(false)
-const form = ref<Partial<ListModel>>({ name: '', key: '', url: '', description: '', content_type: null })
-
-const defaultUrl = computed(() => `/list${lists.value.length + 1}`)
+const form = ref<Partial<ListModel>>({ name: '', key: '', description: '', content_type: null })
 
 function openCreateDialog() {
   showCreate.value = true
@@ -75,7 +71,7 @@ const handleCreate = async () => {
   const newList = await createList(appId, form.value)
   ElMessage.success('创建成功')
   showCreate.value = false
-  form.value = { name: '', key: '', url: '', description: '', content_type: null }
+  form.value = { name: '', key: '', description: '', content_type: null }
   router.push(`/apps/${appId}/lists/${newList.id}/data`)
 }
 

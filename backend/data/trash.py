@@ -26,7 +26,6 @@ class TrashView(APIView):
                             rec['updated_at'] = rec['updated_at'].isoformat()
                         rec['_list_name'] = lst.name
                         rec['_list_id'] = str(lst.id)
-                        rec['_list_url'] = lst.url
                         rec['_type'] = 'record'
                         deleted_records.append(rec)
                 except Exception:
@@ -46,7 +45,6 @@ class TrashView(APIView):
                 'type': 'record',
                 'name': f'{rec["_list_name"]} / {str(rec["data"])[:50]}',
                 'list_id': rec['_list_id'],
-                'list_url': rec['_list_url'],
                 'deleted_at': rec.get('updated_at'),
             })
 

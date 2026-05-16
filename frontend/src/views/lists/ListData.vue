@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getList, getListViews, createListView, getFormSchema } from '../../api/lists'
+import { getListViews, createListView, getFormSchema } from '../../api/lists'
 import { getRecords, deleteRecord, batchUpdate } from '../../api/records'
 import AppLayout from '../../components/AppLayout.vue'
 import ViewTabs from '../../components/ViewTabs.vue'
@@ -39,7 +39,6 @@ import type { FormField, ListView, RecordItem } from '../../types'
 const route = useRoute()
 const appId = route.params.appId as string
 const listId = route.params.listId as string
-const listUrl = ref<string>('')
 
 const loading = ref(true)
 const allFields = ref<FormField[]>([])
@@ -69,15 +68,13 @@ const loadData = async () => {
     const params: Record<string, unknown> = { page: page.value, page_size: pageSize.value }
     if (filterStr.value) params.filter = filterStr.value
     if (activeView.value) params.view = activeView.value
-    const res = await getRecords(appId, listUrl.value, params)
+    const res = await getRecords(appId, listId, params)
     records.value = res.results
     total.value = res.total
   } finally { loading.value = false }
 }
 
 onMounted(async () => {
-  const list = await getList(appId, listId)
-  listUrl.value = list.url.replace(/^\//, '')
   const [schemaRes, viewsRes] = await Promise.all([
     getFormSchema(appId, listId),
     getListViews(listId),
@@ -91,5 +88,5 @@ const onSearch = (f: string) => { filterStr.value = f; page.value = 1; loadData(
 const resetSearch = () => { filterStr.value = ''; page.value = 1; loadData() }
 const switchView = (key: string) => { activeView.value = key; loadData() }
 const onSelection = (rows: RecordItem[]) => { selectedIds.value = rows.map(r => r.id) }
-const handleDelete = async (id: string) => { await deleteRecord(appId, listUrl.value, id); loadData() }
+const handleDelete = async (id: string) => { await deleteRecord(appId, listId, id); loadData() }
 </script>

@@ -8,7 +8,6 @@ export interface Application extends BaseEntity {
   name: string
   key: string
   description: string
-  url_prefix: string
   parent: string | null
   order: number
   children?: Application[]
@@ -61,7 +60,6 @@ export interface ListModel extends BaseEntity {
   key: string
   description: string
   content_type: string | null
-  url: string
   table_name: string
   is_deleted: boolean
   deleted_at: string | null

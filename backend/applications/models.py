@@ -6,7 +6,6 @@ class Application(BaseModel):
     name = models.CharField(max_length=200)
     key = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=500, blank=True, default='')
-    url_prefix = models.CharField(max_length=200, default='/')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     order = models.IntegerField(default=0)
 
@@ -16,11 +15,6 @@ class Application(BaseModel):
 
     def __str__(self):
         return self.name
-
-    def get_full_url_prefix(self):
-        if self.parent:
-            return self.parent.get_full_url_prefix().rstrip('/') + '/' + self.url_prefix.strip('/')
-        return '/' + self.url_prefix.strip('/') if self.url_prefix.strip('/') else '/'
 
 
 class Navigation(BaseModel):

@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getList, getFormSchema } from '../../api/lists'
+import { getFormSchema } from '../../api/lists'
 import { getRecord, createRecord, updateRecord } from '../../api/records'
 import AppLayout from '../../components/AppLayout.vue'
 import DynamicForm from '../../components/DynamicForm.vue'
@@ -25,7 +25,6 @@ const route = useRoute()
 const router = useRouter()
 const appId = route.params.appId as string
 const listId = route.params.listId as string
-const listUrl = ref<string>('')
 const recordId = route.params.recordId as string | undefined
 const isEdit = computed(() => !!recordId)
 
@@ -35,14 +34,10 @@ const formRef = ref<InstanceType<typeof DynamicForm>>()
 const submitting = ref(false)
 
 onMounted(async () => {
-  const [list, schema] = await Promise.all([
-    getList(appId, listId),
-    getFormSchema(appId, listId),
-  ])
-  listUrl.value = list.url.replace(/^\//, '')
+  const schema = await getFormSchema(appId, listId)
   fields.value = schema.fields
   if (isEdit.value) {
-    const record = await getRecord(appId, listUrl.value, recordId!)
+    const record = await getRecord(appId, listId, recordId!)
     initialData.value = record.data || {}
   }
 })
@@ -53,9 +48,9 @@ const submit = async () => {
   try {
     const data = formRef.value!.getData()
     if (isEdit.value) {
-      await updateRecord(appId, listUrl.value, recordId!, data)
+      await updateRecord(appId, listId, recordId!, data)
     } else {
-      await createRecord(appId, listUrl.value, data)
+      await createRecord(appId, listId, data)
     }
     ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
     router.push(`/apps/${appId}/lists/${listId}/data`)

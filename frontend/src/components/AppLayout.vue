@@ -52,7 +52,6 @@
     <el-form :model="childForm">
       <el-form-item label="名称"><el-input v-model="childForm.name" /></el-form-item>
       <el-form-item label="标识"><el-input v-model="childForm.key" /></el-form-item>
-      <el-form-item label="URL前缀"><el-input v-model="childForm.url_prefix" placeholder="/" /></el-form-item>
       <el-form-item label="描述"><el-input v-model="childForm.description" /></el-form-item>
     </el-form>
     <template #footer>
@@ -77,7 +76,7 @@ const appId = route.params.appId as string
 const siteName = ref('通用列表系统')
 const navItems = ref<Navigation[]>([])
 const showChildDialog = ref(false)
-const childForm = ref<Partial<Application>>({ name: '', key: '', url_prefix: '/', description: '' })
+const childForm = ref<Partial<Application>>({ name: '', key: '', description: '' })
 
 const loadSite = async () => {
   if (!appId) return
@@ -110,7 +109,7 @@ const handleCommand = (cmd: string) => {
       router.push(`/apps/${appId}/lists?new=1`)
       break
     case 'new-child':
-      childForm.value = { name: '', key: '', url_prefix: '/', description: '' }
+      childForm.value = { name: '', key: '', description: '' }
       showChildDialog.value = true
       break
   }
