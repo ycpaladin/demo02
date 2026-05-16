@@ -10,6 +10,7 @@
         <template #default="{ row }">
           <el-button link type="primary" @click="$router.push(`/apps/${appId}/lists/${row.id}/data`)">数据</el-button>
           <el-button link type="primary" @click="$router.push(`/apps/${appId}/lists/${row.id}/design`)">设计</el-button>
+          <el-button link type="primary" @click="$router.push(`/apps/${appId}/lists/${row.id}/settings`)">设置</el-button>
           <el-popconfirm title="确认删除?" @confirm="handleDelete(row.id)">
             <template #reference><el-button link type="danger">删除</el-button></template>
           </el-popconfirm>
@@ -38,7 +39,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { getLists, createList, deleteList } from '../../api/lists'
 import { getContentTypes } from '../../api/contentTypes'
 import AppLayout from '../../components/AppLayout.vue'
@@ -46,6 +47,7 @@ import { ElMessage } from 'element-plus'
 import type { ListModel, ContentType } from '../../types'
 
 const route = useRoute()
+const router = useRouter()
 const appId = route.params.appId as string
 const lists = ref<ListModel[]>([])
 const contentTypes = ref<ContentType[]>([])
@@ -57,6 +59,10 @@ const defaultUrl = computed(() => `/list${lists.value.length + 1}`)
 onMounted(async () => {
   lists.value = await getLists(appId)
   contentTypes.value = await getContentTypes()
+  if (route.query.new === '1') {
+    showCreate.value = true
+    router.replace({ path: route.path })
+  }
 })
 
 const handleCreate = async () => {

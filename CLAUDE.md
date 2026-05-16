@@ -69,6 +69,14 @@ Four Django apps, all mounted under `/api/`:
 
 Vue 3 + TypeScript + Element Plus + Vite. Vite proxies `/api` to `localhost:8000`.
 
+#### Layout
+
+AppLayout.vue provides the shell: header with site name + "设置" dropdown, left sidebar driven by navigation API, main content via `<slot>`.
+
+Header dropdown items: 站点设置, 查看网站所有内容, 新建列表, 新建子站点.
+
+#### File structure
+
 ```
 src/
 ├── api/index.ts          # axios instance, DRF pagination unwrapper, error flattener
@@ -77,18 +85,29 @@ src/
 ├── utils/ruleEngine.ts   # Client-side validation rule builder from field definitions
 ├── router/index.ts       # All routes scoped under /apps/:appId
 ├── components/
-│   ├── AppLayout.vue     # Shell: sidebar + header + <router-view>
-│   ├── AppSidebar.vue    # Navigation menu per app
+│   ├── AppLayout.vue     # Shell: sidebar + header with settings dropdown + slot
 │   ├── DynamicForm.vue   # Renders form fields from schema, applies validation rules
 │   ├── DynamicSearchBar.vue  # Generates search inputs from searchable fields
 │   └── ViewTabs.vue      # Tag-based view switcher
 └── views/
-    ├── applications/AppList.vue
-    ├── field-types/FieldTypeList.vue
-    ├── content-types/{ContentTypeList,ContentTypeDesigner}.vue
-    ├── lists/{ListManagement,ListDesigner,ListData,RecordForm}.vue
-    ├── trash/TrashPage.vue
-    └── navigations/NavigationConfig.vue
+    ├── SiteOverview.vue  # "查看网站所有内容" — lists + child sites sorted by created_at
+    ├── applications/
+    │   └── AppList.vue
+    ├── lists/
+    │   ├── ListManagement.vue  # Default landing page for a site
+    │   ├── ListDesigner.vue    # List field designer
+    │   ├── ListData.vue        # Record table with search/filter/pagination
+    │   ├── RecordForm.vue      # Create / edit record (form-based)
+    │   ├── ListSettings.vue    # Card page: info / fields / views
+    │   └── ListInfoEdit.vue    # Edit list name, description, url
+    └── settings/
+        ├── SiteSettings.vue    # Card page: info / content-types / field-types / navigations / trash
+        ├── SiteInfoEdit.vue    # Edit site name, key, url_prefix, description
+        ├── ContentTypeList.vue
+        ├── ContentTypeDesigner.vue
+        ├── FieldTypeList.vue
+        ├── NavigationConfig.vue
+        └── TrashPage.vue
 ```
 
 **Important frontend patterns:**
@@ -96,6 +115,7 @@ src/
 - `RecordForm.vue` handles both create and edit (edit mode when `recordId` route param exists)
 - API modules are thin wrappers around the axios instance; the interceptor handles DRF pagination unwrapping
 - `FormSchema.rules[]` are Element Plus form rule objects, built server-side by `ValidationEngine.build_frontend_rules()`
+- Sidebar menu items come from the navigation API (`/api/apps/:appId/navigations/`), filtered by `visible=true`
 
 ### Database
 

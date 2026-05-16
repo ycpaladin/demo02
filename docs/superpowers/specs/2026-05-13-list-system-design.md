@@ -327,26 +327,81 @@ CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE JSON_VALUE(data, '$._is_
 
 ## 六、前端页面
 
-### 6.1 页面路由
+### 6.1 整体布局
 
 ```
-/apps                                 — 应用列表
-/apps/:id                             — 应用详情/设置
-/apps/:id/field-types                 — 字段类型管理
-/apps/:id/validators                  — 验证器管理
-/apps/:id/content-types               — 内容类型列表
-/apps/:id/content-types/:ctId         — 内容类型设计器
-/apps/:id/lists                       — 列表管理
-/apps/:id/lists/:listId/design        — 列表字段设计器
-/apps/:id/lists/:listId/data          — 数据表格视图（默认视图）
-/apps/:id/lists/:listId/data/add      — 新增记录（独立页面）
-/apps/:id/lists/:listId/data/:recordId      — 记录详情
-/apps/:id/lists/:listId/data/:recordId/edit — 编辑记录（独立页面）
-/apps/:id/trash                       — 回收站
-/apps/:id/navigations                 — 菜单导航配置
+┌──────────────────────────────────────────────────────────┐
+│  [站点名称]                            [设置 ▾]          │
+│                                       ├ 站点设置          │
+│                                       ├ 查看网站所有内容   │
+│                                       ├ 新建列表          │
+│                                       └ 新建子站点         │
+├───────────┬──────────────────────────────────────────────┤
+│ 侧边栏     │  主内容区                                     │
+│ (导航菜单)  │                                              │
+│           │                                              │
+│ 首页       │                                              │
+│ 博客列表    │                                              │
+│ ...       │                                              │
+└───────────┴──────────────────────────────────────────────┘
 ```
 
-### 6.2 核心交互
+- 侧边栏数据来源：菜单配置（`/api/apps/:appId/navigations/`），仅渲染 `visible=true` 的项
+- 设置下拉菜单提供 4 个入口：站点设置、查看网站所有内容、新建列表（跳转列表页并弹窗）、新建子站点（对话框）
+
+### 6.2 页面路由
+
+```
+/apps                                                   — 应用列表
+/apps/:appId                                            — 重定向到 /apps/:appId/lists
+/apps/:appId/lists                                      — 列表管理（默认首页）
+/apps/:appId/lists/:listId/data                         — 数据表格视图（默认视图）
+/apps/:appId/lists/:listId/data/add                     — 新增记录
+/apps/:appId/lists/:listId/data/:recordId/edit          — 编辑记录
+/apps/:appId/lists/:listId/design                       — 列表字段设计器
+/apps/:appId/lists/:listId/settings                     — 列表设置（卡片页）
+/apps/:appId/lists/:listId/settings/info                — 列表基本信息编辑
+/apps/:appId/lists/:listId/settings/fields              — 列表字段管理
+/apps/:appId/lists/:listId/settings/views               — 列表视图管理
+/apps/:appId/overview                                   — 查看网站所有内容
+/apps/:appId/settings                                   — 站点设置（卡片页）
+/apps/:appId/settings/info                               — 站点基本信息编辑
+/apps/:appId/settings/content-types                      — 内容类型管理
+/apps/:appId/settings/content-types/:ctId                — 内容类型设计器
+/apps/:appId/settings/field-types                        — 字段类型管理
+/apps/:appId/settings/navigations                        — 菜单导航配置
+/apps/:appId/settings/trash                              — 回收站
+```
+
+### 6.3 站点设置页
+
+分类卡片从左往右排列，点击跳转到对应的独立设置页面：
+
+| 卡片 | 路由 | 说明 |
+|------|------|------|
+| 站点信息 | `settings/info` | 编辑名称、标识、URL 前缀、描述 |
+| 内容类型 | `settings/content-types` | 内容类型 CRUD + 设计器 |
+| 字段管理 | `settings/field-types` | 内置/自定义字段类型管理 |
+| 菜单配置 | `settings/navigations` | 侧边栏导航菜单配置 |
+| 回收站 | `settings/trash` | 已删除列表 + 已删除记录 |
+
+### 6.4 列表设置页
+
+分类卡片 + 独立路由子页面：
+
+| 卡片 | 路由 | 说明 |
+|------|------|------|
+| 基本信息 | `settings/info` | 编辑名称、描述、URL |
+| 字段管理 | `settings/fields` | 列表字段定义（复用 ListDesigner） |
+| 视图管理 | `settings/views` | 列表视图配置 |
+
+### 6.5 查看网站所有内容
+
+按创建时间倒序排列，分组显示：
+- **列表**：当前站点下所有列表，以卡片形式展示名称/标识/URL/记录数
+- **子站点**：当前站点的子站点，以卡片形式展示
+
+### 6.6 核心交互
 
 - **内容类型设计器**：选择父级 → 添加/拖拽字段 → 配置每个字段的校验、搜索等
 - **数据表格页**：顶部视图标签切换 → 搜索栏（可搜索字段动态生成）→ 表格 → 分页 → 批量编辑栏
