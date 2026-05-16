@@ -1,7 +1,8 @@
 # 通用列表系统 需求设计文档
 
 **日期**：2026-05-13
-**状态**：设计定稿，待实现
+**状态**：实现中，持续更新
+**最后更新**：2026-05-16
 
 ---
 
@@ -34,9 +35,9 @@
 
 ### 3.1 应用空间
 
-- 应用支持层级结构（parent 自引用），形成树形组织
-- 每个应用有独立 `url_prefix`，子应用 URL 由父级前缀递归拼接
-- 例：`/admin/cms/news` 表示 企业管理平台 → 内容管理 → 新闻中心
+- 应用支持层级结构（parent 自引用），形成树形组织，通过 ID 路由定位
+- 应用列表 API 默认返回根级应用，支持 `?parent=<app_id>` 过滤子应用
+- 子站点设置菜单自动显示"访问父级站点"入口，跳转到父级站点概览页
 - 应用下所有列表、回收站、导航配置均归属该应用
 
 ### 3.2 字段类型管理
@@ -77,6 +78,10 @@
 - 内容类型是由若干字段组成的"结构模板"
 - 支持继承：子类型递归合并所有父级字段，同名字段子覆盖父
 - 例：基础实体（名称、创建时间、状态）→ 文章（继承基础实体 + 正文、摘要、发布日期）→ 新闻稿（继承文章 + 新闻来源、记者）
+- **字段集合页面**：去除基本信息编辑，专注字段管理；支持新增/编辑/删除/上下拖拽排序/默认值配置
+- **草稿保存机制**：所有字段变更仅修改本地状态，点击"保存更改"批量提交 API（删除→创建→更新→排序），支持"放弃更改"恢复原始快照
+- **关联引用字段**：选择"关联引用"类型后通过 el-cascader 级联选择目标列表和字段（第二级懒加载），保存后级联选择器锁定不可更改
+- **字段唯一性校验**：字段名和标识在当前内容类型内必须唯一
 
 ### 3.6 列表管理
 
@@ -85,7 +90,7 @@
   - **独立添加字段**：不绑定内容类型，列表自行管理字段
 - 创建列表时自动生成物理数据表 `dyn_{list.key}`（id + JSON 数据列 + 时间戳）
 - 对于标记唯一或常被查询的字段，可选自动创建计算列和索引
-- 列表 URL：默认值为 `/list{n}`（n = 同应用下列表数 + 1），用户可自定义
+- 列表字段设计器复用共用 FieldDesigner 组件，支持与内容类型字段相同的草稿保存、拖拽排序、关联引用等功能
 
 ### 3.7 列表视图
 
@@ -131,10 +136,11 @@
 | name | nvarchar | 应用名称 |
 | key | nvarchar | 唯一标识 |
 | description | nvarchar | |
-| url_prefix | nvarchar | URL 前缀 |
 | parent | FK → self, nullable | 父应用 |
 | order | int | 排序 |
 | created_at / updated_at | datetime2 | |
+
+> 已移除 `url_prefix` 字段，所有路由使用 UUID 定位。
 
 #### field_types
 | 字段 | 类型 | 说明 |
@@ -184,7 +190,7 @@
 | searchable | bool | 是否可搜索 |
 | search_type | nvarchar | fuzzy / range / exact |
 | order | int | 排序 |
-| config | JSON | 字段配置（如选项列表、最大长度等） |
+| config | JSON | 字段配置。通用键：`default_value`；引用字段：`reference_list`（目标列表 UUID）、`reference_field`（目标字段 key） |
 | validators | JSON | 关联的验证器 key 列表 |
 | created_at / updated_at | datetime2 | |
 
@@ -197,11 +203,12 @@
 | key | nvarchar (唯一) | 标识符 |
 | description | nvarchar | |
 | content_type | FK → content_types, nullable | 绑定的内容类型 |
-| url | nvarchar | 访问路径标识，默认 /list{n} |
 | table_name | nvarchar | 动态表名 dyn_{key} |
 | is_deleted | bool (default false) | 软删除标记 |
 | deleted_at | datetime2, nullable | 删除时间 |
 | created_at / updated_at | datetime2 | |
+
+> 已移除 `url` 字段，列表通过 UUID 路由访问。
 
 #### list_fields
 | 字段 | 类型 | 说明 |
@@ -211,8 +218,7 @@
 | field_type | FK → field_types | 字段类型 |
 | name | nvarchar | 字段显示名 |
 | key | nvarchar | 字段标识 |
-| required / unique / searchable / search_type | | 同 content_type_fields |
-| order / config / validators | | 同 content_type_fields |
+| required / unique / searchable / search_type / order / config / validators | | 同 content_type_fields |
 
 #### list_views
 | 字段 | 类型 | 说明 |
@@ -279,14 +285,14 @@ CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE JSON_VALUE(data, '$._is_
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| CRUD | `/api/apps/` | 应用管理 |
+| CRUD | `/api/apps/` | 应用管理。支持 `?parent=<app_id>` 过滤子应用 |
 | CRUD | `/api/apps/{id}/navigations/` | 导航菜单 |
 | CRUD | `/api/field-types/` | 字段类型（内置不可删） |
 | CRUD | `/api/validators/` | 自定义验证器 |
 | CRUD | `/api/content-types/` | 内容类型 |
-| CRUD | `/api/content-types/{id}/fields/` | 内容类型字段 |
+| CRUD | `/api/content-types/{id}/fields/` | 内容类型字段。POST `/fields/reorder/` 批量更新排序 |
 | CRUD | `/api/apps/{app_id}/lists/` | 列表（已删除的不返回） |
-| CRUD | `/api/lists/{id}/fields/` | 列表独立字段 |
+| CRUD | `/api/lists/{id}/fields/` | 列表独立字段。POST `/fields/reorder/` 批量更新排序 |
 | CRUD | `/api/lists/{id}/views/` | 列表视图 |
 | GET | `/api/lists/{id}/form-schema/` | 返回字段+校验规则（前端渲染用） |
 
@@ -347,27 +353,27 @@ CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE JSON_VALUE(data, '$._is_
 ```
 
 - 侧边栏数据来源：菜单配置（`/api/apps/:appId/navigations/`），仅渲染 `visible=true` 的项
-- 设置下拉菜单提供 4 个入口：站点设置、查看网站所有内容、新建列表（跳转列表页并弹窗）、新建子站点（对话框）
+- 设置下拉菜单提供：站点设置、查看网站所有内容、访问父级站点（仅子站点显示）、新建列表（跳转列表页并弹窗）、新建子站点（对话框）
 
 ### 6.2 页面路由
 
 ```
 /apps                                                   — 应用列表
 /apps/:appId                                            — 重定向到 /apps/:appId/lists
-/apps/:appId/lists                                      — 列表管理（默认首页）
+/apps/:appId/lists                                      — 列表管理（默认首页），?new=1 弹出新建对话框
 /apps/:appId/lists/:listId/data                         — 数据表格视图（默认视图）
 /apps/:appId/lists/:listId/data/add                     — 新增记录
 /apps/:appId/lists/:listId/data/:recordId/edit          — 编辑记录
-/apps/:appId/lists/:listId/design                       — 列表字段设计器
-/apps/:appId/lists/:listId/settings                     — 列表设置（卡片页）
+/apps/:appId/lists/:listId/design                       — 列表字段设计器（旧）
+/apps/:appId/lists/:listId/settings                     — 列表设置（卡片页：基本信息/字段管理/视图管理）
 /apps/:appId/lists/:listId/settings/info                — 列表基本信息编辑
-/apps/:appId/lists/:listId/settings/fields              — 列表字段管理
+/apps/:appId/lists/:listId/settings/fields              — 列表字段集合（草稿模式，共用 FieldDesigner）
 /apps/:appId/lists/:listId/settings/views               — 列表视图管理
-/apps/:appId/overview                                   — 查看网站所有内容
+/apps/:appId/overview                                   — 查看网站所有内容（列表卡片 + 子站点卡片）
 /apps/:appId/settings                                   — 站点设置（卡片页）
-/apps/:appId/settings/info                               — 站点基本信息编辑
-/apps/:appId/settings/content-types                      — 内容类型管理
-/apps/:appId/settings/content-types/:ctId                — 内容类型设计器
+/apps/:appId/settings/info                              — 站点基本信息编辑
+/apps/:appId/settings/content-types                     — 内容类型管理（含字段数量列 + 编辑对话框）
+/apps/:appId/settings/content-types/:ctId                — 内容类型字段集合（草稿模式，含继承字段只读表）
 /apps/:appId/settings/field-types                        — 字段类型管理
 /apps/:appId/settings/navigations                        — 菜单导航配置
 /apps/:appId/settings/trash                              — 回收站
@@ -403,7 +409,8 @@ CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE JSON_VALUE(data, '$._is_
 
 ### 6.6 核心交互
 
-- **内容类型设计器**：选择父级 → 添加/拖拽字段 → 配置每个字段的校验、搜索等
+- **内容类型设计器（字段集合）**：查看继承字段（只读）→ 自有字段增删改 + 上下拖拽排序 → 点击"保存更改"批量提交，"放弃更改"恢复原始状态
+- **关联引用字段**：选择"关联引用"类型后通过级联选择器（el-cascader）指定目标列表和字段，第二级懒加载，保存后锁定不可更改
 - **数据表格页**：顶部视图标签切换 → 搜索栏（可搜索字段动态生成）→ 表格 → 分页 → 批量编辑栏
 - **新增/编辑页**：独立页面，根据字段定义渲染表单，前端即时校验，提交时后端双重校验
 - **回收站**：已删除列表 + 已删除记录两个标签，每项旁有恢复和彻底删除按钮
