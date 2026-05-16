@@ -35,6 +35,7 @@ class ListViewSerializer(serializers.ModelSerializer):
 class ListSerializer(serializers.ModelSerializer):
     fields = ListFieldSerializer(many=True, read_only=True)
     views = ListViewSerializer(many=True, read_only=True)
+    url = serializers.CharField(required=False, allow_blank=True, max_length=200)
 
     class Meta:
         model = List

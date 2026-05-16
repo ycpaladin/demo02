@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLists, createList, deleteList } from '../../api/lists'
 import { getContentTypes } from '../../api/contentTypes'
@@ -56,21 +56,27 @@ const form = ref<Partial<ListModel>>({ name: '', key: '', url: '', description: 
 
 const defaultUrl = computed(() => `/list${lists.value.length + 1}`)
 
+function openCreateDialog() {
+  showCreate.value = true
+  router.replace({ path: route.path })
+}
+
 onMounted(async () => {
   lists.value = await getLists(appId)
   contentTypes.value = await getContentTypes()
-  if (route.query.new === '1') {
-    showCreate.value = true
-    router.replace({ path: route.path })
-  }
+  if (route.query.new === '1') openCreateDialog()
+})
+
+watch(() => route.query.new, (val) => {
+  if (val === '1') openCreateDialog()
 })
 
 const handleCreate = async () => {
-  await createList(appId, form.value)
+  const newList = await createList(appId, form.value)
   ElMessage.success('创建成功')
   showCreate.value = false
-  lists.value = await getLists(appId)
   form.value = { name: '', key: '', url: '', description: '', content_type: null }
+  router.push(`/apps/${appId}/lists/${newList.id}/data`)
 }
 
 const handleDelete = async (id: string) => {
