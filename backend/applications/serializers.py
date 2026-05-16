@@ -20,4 +20,4 @@ class NavigationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Navigation
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'application', 'created_at', 'updated_at']

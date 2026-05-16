@@ -59,7 +59,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'mssql',
         'NAME': 'DataDb',
-        'HOST': '10.6.3.15',
+        'HOST': '192.168.11.219',
         'USER': 'sa',
         'PASSWORD': '@1Qazxsw2',
         'PORT': '1433',

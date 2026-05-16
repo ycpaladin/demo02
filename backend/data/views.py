@@ -12,7 +12,12 @@ from data.serializer_factory import SerializerFactory
 class DynamicRecordView(APIView):
 
     def _get_list(self, app_id, list_url):
-        return List.objects.get(application_id=app_id, url=list_url, is_deleted=False)
+        from django.db.models import Q
+        return List.objects.get(
+            Q(application_id=app_id),
+            Q(url=list_url) | Q(url='/' + list_url),
+            is_deleted=False,
+        )
 
     def get(self, request, app_id, list_url):
         lst = self._get_list(app_id, list_url)
@@ -55,7 +60,12 @@ class DynamicRecordView(APIView):
 
 class DynamicRecordDetailView(APIView):
     def _get_list(self, app_id, list_url):
-        return List.objects.get(application_id=app_id, url=list_url, is_deleted=False)
+        from django.db.models import Q
+        return List.objects.get(
+            Q(application_id=app_id),
+            Q(url=list_url) | Q(url='/' + list_url),
+            is_deleted=False,
+        )
 
     def _get_record(self, table_name, record_id):
         with connection.cursor() as cursor:

@@ -24,7 +24,7 @@
 | 层级 | 技术 |
 |------|------|
 | 前端 | Vue 3 + TypeScript + Element Plus |
-| 后端 | Python + Django REST Framework |
+| 后端 | Python(虚拟环境venv目录) + Django REST Framework |
 | 数据库 | MSSQL（元数据：普通关系表；数据：每列表独立建表，JSON 列存储字段值） |
 | 权限 | 后续添加 |
 

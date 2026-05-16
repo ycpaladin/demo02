@@ -68,12 +68,34 @@ class List(BaseModel):
 
     def get_all_fields(self):
         from metadata.managers import ContentTypeManager
+        from collections import OrderedDict
+        fields = OrderedDict()
+
         if self.content_type:
-            return ContentTypeManager.resolve_fields(self.content_type)
-        return self.fields.all()
+            for f in ContentTypeManager.resolve_fields(self.content_type):
+                fields[f['key']] = f
+
+        for f in self.fields.all():
+            fields[f.key] = {
+                'name': f.name,
+                'key': f.key,
+                'field_type': f.field_type,
+                'field_type__key': f.field_type.key,
+                'required': f.required,
+                'unique': f.unique,
+                'searchable': f.searchable,
+                'search_type': f.search_type,
+                'order': f.order,
+                'config': f.config,
+                'validators': f.validators,
+            }
+
+        return list(fields.values())
 
 
 class ListField(BaseModel):
+    config = models.JSONField(default=dict, blank=True)
+    validators = models.JSONField(default=list, blank=True)
     list = models.ForeignKey(List, on_delete=models.CASCADE, related_name='fields')
     field_type = models.ForeignKey('core.FieldType', on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
@@ -83,8 +105,6 @@ class ListField(BaseModel):
     searchable = models.BooleanField(default=False)
     search_type = models.CharField(max_length=20, blank=True, default='')
     order = models.IntegerField(default=0)
-    config = models.JSONField(default=dict, blank=True)
-    validators = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = 'list_fields'
