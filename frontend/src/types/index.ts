@@ -43,6 +43,8 @@ export interface ContentType extends BaseEntity {
 export interface ContentTypeField extends BaseEntity {
   content_type: string
   field_type: string
+  field_type__key?: string
+  field_type__name?: string
   name: string
   key: string
   required: boolean

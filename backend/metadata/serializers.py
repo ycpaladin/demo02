@@ -3,6 +3,9 @@ from metadata.models import ContentType, ContentTypeField, List, ListField, List
 
 
 class ContentTypeFieldSerializer(serializers.ModelSerializer):
+    field_type__key = serializers.CharField(source='field_type.key', read_only=True)
+    field_type__name = serializers.CharField(source='field_type.name', read_only=True)
+
     class Meta:
         model = ContentTypeField
         fields = '__all__'
@@ -19,6 +22,9 @@ class ContentTypeSerializer(serializers.ModelSerializer):
 
 
 class ListFieldSerializer(serializers.ModelSerializer):
+    field_type__key = serializers.CharField(source='field_type.key', read_only=True)
+    field_type__name = serializers.CharField(source='field_type.name', read_only=True)
+
     class Meta:
         model = ListField
         fields = '__all__'

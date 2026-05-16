@@ -18,10 +18,20 @@ class ContentTypeFieldViewSet(viewsets.ModelViewSet):
     serializer_class = ContentTypeFieldSerializer
 
     def get_queryset(self):
-        return ContentTypeField.objects.filter(content_type_id=self.kwargs['ct_id'])
+        return ContentTypeField.objects.filter(content_type_id=self.kwargs['ct_id']).order_by('order')
 
     def perform_create(self, serializer):
-        serializer.save(content_type_id=self.kwargs['ct_id'])
+        last = ContentTypeField.objects.filter(content_type_id=self.kwargs['ct_id']).order_by('-order').first()
+        next_order = (last.order + 1) if last else 0
+        serializer.save(content_type_id=self.kwargs['ct_id'], order=next_order)
+
+    @action(detail=False, methods=['post'], url_path='reorder')
+    def reorder(self, request, ct_id=None):
+        """Reorder fields — body: { ordered_ids: [...] }"""
+        ordered_ids = request.data.get('ordered_ids', [])
+        for i, fid in enumerate(ordered_ids):
+            ContentTypeField.objects.filter(id=fid, content_type_id=ct_id).update(order=i)
+        return Response({'status': 'ok'})
 
 
 class ListViewSet(viewsets.ModelViewSet):
@@ -89,10 +99,21 @@ class ListFieldViewSet(viewsets.ModelViewSet):
     serializer_class = ListFieldSerializer
 
     def get_queryset(self):
-        return ListField.objects.filter(list_id=self.kwargs['list_id'])
+        return ListField.objects.filter(list_id=self.kwargs['list_id']).order_by('order')
 
     def perform_create(self, serializer):
-        serializer.save(list_id=self.kwargs['list_id'])
+        # auto-increment order
+        last = ListField.objects.filter(list_id=self.kwargs['list_id']).order_by('-order').first()
+        next_order = (last.order + 1) if last else 0
+        serializer.save(list_id=self.kwargs['list_id'], order=next_order)
+
+    @action(detail=False, methods=['post'], url_path='reorder')
+    def reorder(self, request, list_id=None):
+        """Reorder fields — body: { ordered_ids: [...] }"""
+        ordered_ids = request.data.get('ordered_ids', [])
+        for i, fid in enumerate(ordered_ids):
+            ListField.objects.filter(id=fid, list_id=list_id).update(order=i)
+        return Response({'status': 'ok'})
 
 
 class ListViewViewSet(viewsets.ModelViewSet):

@@ -10,6 +10,7 @@ export const getListFields = (listId: string): Promise<ListField[]> => api.get(`
 export const createListField = (listId: string, data: Partial<ListField>): Promise<ListField> => api.post(`/lists/${listId}/fields/`, data)
 export const updateListField = (listId: string, id: string, data: Partial<ListField>): Promise<ListField> => api.put(`/lists/${listId}/fields/${id}/`, data)
 export const deleteListField = (listId: string, id: string): Promise<void> => api.delete(`/lists/${listId}/fields/${id}/`)
+export const reorderListFields = (listId: string, orderedIds: string[]): Promise<void> => api.post(`/lists/${listId}/fields/reorder/`, { ordered_ids: orderedIds })
 export const getListViews = (listId: string): Promise<ListView[]> => api.get(`/lists/${listId}/views/`)
 export const createListView = (listId: string, data: Partial<ListView>): Promise<ListView> => api.post(`/lists/${listId}/views/`, data)
 export const updateListView = (listId: string, id: string, data: Partial<ListView>): Promise<ListView> => api.put(`/lists/${listId}/views/${id}/`, data)

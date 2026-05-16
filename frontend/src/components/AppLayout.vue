@@ -35,6 +35,7 @@
             <el-dropdown-menu>
               <el-dropdown-item command="settings">站点设置</el-dropdown-item>
               <el-dropdown-item command="overview">查看网站所有内容</el-dropdown-item>
+              <el-dropdown-item command="parent-site" v-if="app?.parent">访问父级站点</el-dropdown-item>
               <el-dropdown-item command="new-list">新建列表</el-dropdown-item>
               <el-dropdown-item command="new-child">新建子站点</el-dropdown-item>
             </el-dropdown-menu>
@@ -74,6 +75,7 @@ const router = useRouter()
 const appId = route.params.appId as string
 
 const siteName = ref('通用列表系统')
+const app = ref<Application | null>(null)
 const navItems = ref<Navigation[]>([])
 const showChildDialog = ref(false)
 const childForm = ref<Partial<Application>>({ name: '', key: '', description: '' })
@@ -81,8 +83,9 @@ const childForm = ref<Partial<Application>>({ name: '', key: '', description: ''
 const loadSite = async () => {
   if (!appId) return
   try {
-    const app = await getApp(appId)
-    siteName.value = app.name
+    const a = await getApp(appId)
+    app.value = a
+    siteName.value = a.name
   } catch { /* ignore */ }
 }
 
@@ -104,6 +107,9 @@ const handleCommand = (cmd: string) => {
       break
     case 'overview':
       router.push(`/apps/${appId}/overview`)
+      break
+    case 'parent-site':
+      router.push(`/apps/${app.value!.parent}/overview`)
       break
     case 'new-list':
       router.push(`/apps/${appId}/lists?new=1`)

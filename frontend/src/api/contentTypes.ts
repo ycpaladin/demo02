@@ -10,3 +10,4 @@ export const getCTFields = (ctId: string): Promise<ContentTypeField[]> => api.ge
 export const createCTField = (ctId: string, data: Partial<ContentTypeField>): Promise<ContentTypeField> => api.post(`/content-types/${ctId}/fields/`, data)
 export const updateCTField = (ctId: string, id: string, data: Partial<ContentTypeField>): Promise<ContentTypeField> => api.put(`/content-types/${ctId}/fields/${id}/`, data)
 export const deleteCTField = (ctId: string, id: string): Promise<void> => api.delete(`/content-types/${ctId}/fields/${id}/`)
+export const reorderCTFields = (ctId: string, orderedIds: string[]): Promise<void> => api.post(`/content-types/${ctId}/fields/reorder/`, { ordered_ids: orderedIds })

@@ -4,8 +4,16 @@ from applications.serializers import ApplicationSerializer, NavigationSerializer
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):
-    queryset = Application.objects.filter(parent__isnull=True)
     serializer_class = ApplicationSerializer
+
+    def get_queryset(self):
+        qs = Application.objects.all()
+        if self.action != 'list':
+            return qs
+        parent = self.request.query_params.get('parent', None)
+        if parent is not None:
+            return qs.filter(parent_id=parent)
+        return qs.filter(parent__isnull=True)
 
 
 class NavigationViewSet(viewsets.ModelViewSet):

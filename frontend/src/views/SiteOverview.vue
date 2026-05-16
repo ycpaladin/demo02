@@ -50,8 +50,7 @@ const children = ref<Application[]>([])
 onMounted(async () => {
   try { lists.value = await getLists(appId) } catch { /* */ }
   try {
-    const all = await getApps()
-    children.value = all.filter(a => a.parent === appId)
+    children.value = await getApps({ parent: appId })
   } catch { /* */ }
 })
 </script>

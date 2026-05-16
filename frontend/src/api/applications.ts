@@ -1,7 +1,7 @@
 import api from './index'
 import type { Application, Navigation } from '../types'
 
-export const getApps = (): Promise<Application[]> => api.get('/apps/')
+export const getApps = (params?: { parent?: string }): Promise<Application[]> => api.get('/apps/', { params })
 export const getApp = (id: string): Promise<Application> => api.get(`/apps/${id}/`)
 export const createApp = (data: Partial<Application>): Promise<Application> => api.post('/apps/', data)
 export const updateApp = (id: string, data: Partial<Application>): Promise<Application> => api.put(`/apps/${id}/`, data)
