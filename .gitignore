@@ -6,3 +6,6 @@ venv/
 node_modules/
 .gstack/
 backend/odbcinst.ini
+.gstack
+.playwright-mcp
+.claude

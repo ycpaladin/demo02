@@ -17,17 +17,11 @@ BUILTIN_FIELD_TYPES = [
         'max_date': {'type': 'date', 'default': None, 'label': '最晚日期'},
     }},
     {'key': 'boolean', 'name': '布尔', 'icon': 'boolean', 'config_schema': {}},
-    {'key': 'long_text', 'name': '长文本', 'icon': 'longtext', 'config_schema': {
-        'max_length': {'type': 'number', 'default': 10000, 'label': '最大长度'},
-    }},
+
     {'key': 'select', 'name': '下拉选项', 'icon': 'select', 'config_schema': {
         'options': {'type': 'array', 'default': [], 'label': '选项列表'},
     }},
-    {'key': 'multi_select', 'name': '多选', 'icon': 'multiselect', 'config_schema': {
-        'options': {'type': 'array', 'default': [], 'label': '选项列表'},
-        'min_count': {'type': 'number', 'default': None, 'label': '最少选择数'},
-        'max_count': {'type': 'number', 'default': None, 'label': '最多选择数'},
-    }},
+
     {'key': 'attachment', 'name': '附件', 'icon': 'attachment', 'config_schema': {
         'max_size': {'type': 'number', 'default': 10485760, 'label': '文件大小上限(字节)'},
         'allowed_types': {'type': 'array', 'default': [], 'label': '允许的文件类型'},
@@ -35,6 +29,10 @@ BUILTIN_FIELD_TYPES = [
     {'key': 'reference', 'name': '关联引用', 'icon': 'reference', 'config_schema': {
         'target_list': {'type': 'string', 'default': '', 'label': '目标列表ID'},
     }},
+    {'key': 'auto_number', 'name': '自动编号', 'icon': 'autonumber', 'config_schema': {},
+        'description': '创建时系统自动生成，只读'},
+    {'key': 'computed', 'name': '计算值', 'icon': 'computed', 'config_schema': {},
+        'description': '由表达式动态计算，不存储，只读'},
 ]
 
 BUILTIN_VALIDATORS = [

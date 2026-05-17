@@ -54,19 +54,20 @@ class ValidationEngine:
             }),
             'date': (serializers.DateField, {}),
             'boolean': (serializers.BooleanField, {}),
-            'long_text': (serializers.CharField, {
-                'allow_blank': not required,
-                'max_length': config.get('max_length') or 10000,
-            }),
+
             'select': (serializers.CharField, {
                 'allow_blank': not required,
             }),
-            'multi_select': (serializers.ListField, {
-                'child': serializers.CharField(),
-            }),
+
             'attachment': (serializers.JSONField, {}),
             'reference': (serializers.CharField, {
                 'allow_blank': not required,
+            }),
+            'auto_number': (serializers.CharField, {
+                'required': False, 'read_only': True, 'max_length': 100,
+            }),
+            'computed': (serializers.CharField, {
+                'required': False, 'read_only': True,
             }),
         }
         default = (serializers.CharField, {'allow_blank': not required, 'max_length': 255})
@@ -84,8 +85,8 @@ class ValidationEngine:
         if required:
             rules.append({'required': True, 'message': f'{field_def.get("name", "")}为必填', 'trigger': 'blur'})
 
-        if ft_key in ('text', 'long_text'):
-            max_len = config.get('max_length', 255 if ft_key == 'text' else 10000)
+        if ft_key == 'text':
+            max_len = config.get('max_length', 255)
             if max_len:
                 rules.append({'max': max_len, 'message': f'最多{max_len}个字符', 'trigger': 'blur'})
             pattern = config.get('pattern')
@@ -96,11 +97,6 @@ class ValidationEngine:
                 rules.append({'type': 'number', 'min': config['min'], 'message': f'最小值为{config["min"]}', 'trigger': 'blur'})
             if config.get('max') is not None:
                 rules.append({'type': 'number', 'max': config['max'], 'message': f'最大值为{config["max"]}', 'trigger': 'blur'})
-        elif ft_key == 'multi_select':
-            if config.get('min_count'):
-                rules.append({'type': 'array', 'min': config['min_count'], 'message': f'至少选择{config["min_count"]}项', 'trigger': 'change'})
-            if config.get('max_count'):
-                rules.append({'type': 'array', 'max': config['max_count'], 'message': f'最多选择{config["max_count"]}项', 'trigger': 'change'})
 
         for vk in validator_keys:
             if vk in validators_map:

@@ -5,11 +5,13 @@ SEARCH_TYPE_MAP = {
     'number': 'range',
     'date': 'range',
     'boolean': 'exact',
-    'long_text': 'fuzzy',
+
     'select': 'exact',
-    'multi_select': 'exact',
+
     'attachment': None,
     'reference': 'exact',
+    'auto_number': 'exact',
+    'computed': None,
 }
 
 
