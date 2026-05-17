@@ -9,12 +9,14 @@ const routes: RouteRecordRaw[] = [
   { path: '/apps/:appId/lists/:listId/data', name: 'listData', component: () => import('../views/lists/ListData.vue') },
   { path: '/apps/:appId/lists/:listId/data/add', name: 'recordAdd', component: () => import('../views/lists/RecordForm.vue') },
   { path: '/apps/:appId/lists/:listId/data/:recordId/edit', name: 'recordEdit', component: () => import('../views/lists/RecordForm.vue') },
+  { path: '/apps/:appId/lists/:listId/data/:recordId', name: 'recordView', component: () => import('../views/lists/RecordForm.vue') },
 
   // List settings
   { path: '/apps/:appId/lists/:listId/settings', name: 'listSettings', component: () => import('../views/lists/ListSettings.vue') },
   { path: '/apps/:appId/lists/:listId/settings/info', name: 'listInfoEdit', component: () => import('../views/lists/ListInfoEdit.vue') },
   { path: '/apps/:appId/lists/:listId/settings/fields', name: 'listFieldDesigner', component: () => import('../views/lists/ListDesigner.vue') },
-  { path: '/apps/:appId/lists/:listId/settings/views', name: 'listViewManager', component: () => import('../views/lists/ListDesigner.vue') },
+  { path: '/apps/:appId/lists/:listId/settings/views', name: 'listViewManager', component: () => import('../views/lists/ListViewManager.vue') },
+  { path: '/apps/:appId/lists/:listId/settings/form', name: 'formLayoutEditor', component: () => import('../views/lists/FormLayoutEditor.vue') },
 
   // Overview
   { path: '/apps/:appId/overview', name: 'siteOverview', component: () => import('../views/SiteOverview.vue') },

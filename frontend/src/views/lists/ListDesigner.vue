@@ -7,6 +7,7 @@
         :fields="localFieldRows"
         :fieldTypes="fieldTypes"
         :referenceLists="referenceLists"
+        :appId="appId"
         @add="handleAdd"
         @update="handleUpdate"
         @delete="handleDelete"
@@ -30,12 +31,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getLists, getListFields, createListField, updateListField, deleteListField, reorderListFields } from '../../api/lists'
+import { getLists, getListSchema, updateListSchema } from '../../api/lists'
 import { getFieldTypes } from '../../api/fieldTypes'
 import AppLayout from '../../components/AppLayout.vue'
 import FieldDesigner from '../../components/FieldDesigner.vue'
 import { ElMessage } from 'element-plus'
-import type { ListField, FieldType } from '../../types'
+import type { SchemaField, FieldType } from '../../types'
 import type { FieldRow } from '../../components/FieldDesigner.vue'
 
 const route = useRoute()
@@ -47,24 +48,29 @@ const fieldTypes = ref<FieldType[]>([])
 const referenceLists = ref<{ id: string, name: string }[]>([])
 
 // Local draft state
-const fields = ref<ListField[]>([])
+const fields = ref<SchemaField[]>([])
 const originalJson = ref('')
 const deletedIds = ref<string[]>([])
 const dirty = ref(false)
 const saving = ref(false)
 
 const localFieldRows = computed<FieldRow[]>(() => fields.value.map(f => ({
-  ...f,
-  _inherited: undefined,
-  field_type__key: (f as any).field_type__key || '',
-  searchable: (f as any).searchable ?? false,
-  search_type: (f as any).search_type || '',
-  config: (f as any).config || {},
-  validators: (f as any).validators || [],
-  order: (f as any).order ?? 0,
+  id: f.id || f.key,
+  name: f.name,
+  key: f.key,
+  field_type: f.field_type,
+  field_type__key: f.field_type,
+  required: f.required,
+  unique: f.unique,
+  searchable: f.searchable,
+  search_type: f.search_type,
+  config: f.config || {},
+  validators: f.validators || [],
+  order: f.order ?? 0,
+  _inherited: f.is_extension ? undefined : '内容类型',
 })))
 
-const resetState = (serverFields: ListField[]) => {
+const resetState = (serverFields: SchemaField[]) => {
   fields.value = JSON.parse(JSON.stringify(serverFields))
   originalJson.value = JSON.stringify(serverFields)
   deletedIds.value = []
@@ -72,12 +78,12 @@ const resetState = (serverFields: ListField[]) => {
 }
 
 onMounted(async () => {
-  const [flds, fts, lists] = await Promise.all([
-    getListFields(listId),
+  const [schema, fts, lists] = await Promise.all([
+    getListSchema(appId, listId),
     getFieldTypes(),
     getLists(appId).catch(() => [] as any[]),
   ])
-  resetState(flds)
+  resetState(schema.fields)
   fieldTypes.value = fts
   referenceLists.value = lists.map(l => ({ id: l.id, name: l.name }))
 })
@@ -128,41 +134,20 @@ const handleMoveDown = (id: string) => {
 const handleSave = async () => {
   saving.value = true
   try {
-    // 1. Delete marked fields
-    for (const id of deletedIds.value) {
-      await deleteListField(listId, id)
-    }
+    // 只提交扩展字段（is_extension=true 或 新增的）
+    const extFields = fields.value
+      .filter(f => f.is_extension || f.id?.startsWith('__new_'))
+      .map(({ is_extension, ...rest }) => rest)
 
-    // 2. Create new fields
-    const tempToReal: Record<string, string> = {}
-    for (const f of fields.value) {
-      if (f.id.startsWith('__new_')) {
-        const { id, ...data } = f as any
-        const created = await createListField(listId, data)
-        tempToReal[f.id] = created.id
-      }
-    }
+    // 重新获取当前完整 schema
+    const currentSchema = await getListSchema(appId, listId)
+    currentSchema.fields = extFields
 
-    // 3. Update modified existing fields
-    const originals = JSON.parse(originalJson.value) as ListField[]
-    for (const f of fields.value) {
-      if (!f.id.startsWith('__new_')) {
-        const orig = originals.find((o: ListField) => o.id === f.id)
-        if (!orig) continue
-        const { id, ...data } = f as any
-        if (JSON.stringify(orig) !== JSON.stringify(f)) {
-          await updateListField(listId, id, data)
-        }
-      }
-    }
+    await updateListSchema(appId, listId, currentSchema)
 
-    // 4. Reorder
-    const orderedIds = fields.value.map(f => tempToReal[f.id] || f.id)
-    await reorderListFields(listId, orderedIds)
-
-    // 5. Reload
-    const serverFields = await getListFields(listId)
-    resetState(serverFields)
+    // Reload
+    const schema = await getListSchema(appId, listId)
+    resetState(schema.fields)
     ElMessage.success('保存成功')
   } catch (e: unknown) {
     ElMessage.error((e as Error).message)
@@ -170,7 +155,7 @@ const handleSave = async () => {
 }
 
 const handleCancel = async () => {
-  const serverFields = JSON.parse(originalJson.value) as ListField[]
+  const serverFields = JSON.parse(originalJson.value) as SchemaField[]
   resetState(serverFields)
 }
 </script>

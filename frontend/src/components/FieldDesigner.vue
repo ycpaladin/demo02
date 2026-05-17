@@ -141,7 +141,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ArrowUp, ArrowDown } from '@element-plus/icons-vue'
-import { getListFields } from '../api/lists'
+import { getListSchema } from '../api/lists'
 import type { FieldType } from '../types'
 import type { FormRules } from 'element-plus'
 import TextConfig from './fields/TextConfig.vue'
@@ -239,6 +239,7 @@ const props = withDefaults(defineProps<{
   fieldTypes: FieldType[]
   referenceLists?: { id: string, name: string }[]
   showSource?: boolean
+  appId?: string
 }>(), {
   referenceLists: () => [],
   showSource: false,
@@ -404,9 +405,9 @@ const cascaderOptions = computed<CascaderOption[]>(() =>
 
 const lazyLoad = (node: any, resolve: (children: CascaderOption[]) => void) => {
   const listId = node.value as string
-  getListFields(listId)
-    .then(fields => {
-      resolve(fields.map(f => ({
+  getListSchema(props.appId || '', listId)
+    .then(schema => {
+      resolve(schema.fields.map(f => ({
         value: f.key,
         label: `${f.name} (${f.key})`,
         leaf: true,

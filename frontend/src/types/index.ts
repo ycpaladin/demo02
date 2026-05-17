@@ -63,17 +63,22 @@ export interface ListModel extends BaseEntity {
   description: string
   content_type: string | null
   table_name: string
+  schema: ListSchema
   is_deleted: boolean
   deleted_at: string | null
-  fields?: ListField[]
-  views?: ListView[]
 }
 
-export interface ListField extends BaseEntity {
-  list: string
-  field_type: string
-  name: string
+export interface ListSchema {
+  fields: SchemaField[]
+  views: SchemaView[]
+  form: SchemaForm
+}
+
+export interface SchemaField {
+  id?: string
   key: string
+  name: string
+  field_type: string
   required: boolean
   unique: boolean
   searchable: boolean
@@ -81,22 +86,43 @@ export interface ListField extends BaseEntity {
   order: number
   config: Record<string, unknown>
   validators: string[]
+  is_extension?: boolean // GET 时标记是否为扩展字段
 }
 
-export interface ListView extends BaseEntity {
-  list: string
-  name: string
+export interface SchemaView {
+  id?: string
   url_key: string
+  name: string
   is_default: boolean
-  config: ListViewConfig
-  order: number
+  page_size_options: number[]
+  default_page_size: number
+  fields: { key: string; visible: boolean }[]
+  where?: WhereNode
+  orderBy: { field: string; sort: 'ASC' | 'DESC' }[]
 }
 
-export interface ListViewConfig {
-  visible_fields?: string[]
-  default_sort?: string
-  default_filter?: string
-  page_size?: number
+export type WhereNode = WhereBranch | WhereLeaf
+
+export interface WhereBranch {
+  logic: 'AND' | 'OR'
+  left: WhereNode
+  right?: WhereNode
+}
+
+export interface WhereLeaf {
+  field: string
+  comparison: string
+  value: string
+}
+
+export interface SchemaForm {
+  groups: FormGroup[]
+}
+
+export interface FormGroup {
+  name: string
+  columns: number
+  fields: { key: string; col_span: number }[]
 }
 
 export interface Navigation extends BaseEntity {

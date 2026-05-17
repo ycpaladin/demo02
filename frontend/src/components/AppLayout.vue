@@ -33,6 +33,7 @@
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item command="list-settings" v-if="listId">列表设置</el-dropdown-item>
               <el-dropdown-item command="settings">站点设置</el-dropdown-item>
               <el-dropdown-item command="overview">查看网站所有内容</el-dropdown-item>
               <el-dropdown-item command="parent-site" v-if="app?.parent">访问父级站点</el-dropdown-item>
@@ -75,6 +76,7 @@ const router = useRouter()
 const appId = route.params.appId as string
 
 const siteName = ref('通用列表系统')
+const listId = ref<string | undefined>(route.params.listId as string | undefined)
 const app = ref<Application | null>(null)
 const navItems = ref<Navigation[]>([])
 const showChildDialog = ref(false)
@@ -98,10 +100,16 @@ const loadNav = async () => {
 }
 
 onMounted(() => { loadSite(); loadNav() })
-watch(() => route.params.appId, () => { loadSite(); loadNav() })
+watch(() => [route.params.appId, route.params.listId], () => {
+  loadSite(); loadNav()
+  listId.value = route.params.listId as string | undefined
+})
 
 const handleCommand = (cmd: string) => {
   switch (cmd) {
+    case 'list-settings':
+      router.push(`/apps/${appId}/lists/${listId.value}/settings`)
+      break
     case 'settings':
       router.push(`/apps/${appId}/settings`)
       break

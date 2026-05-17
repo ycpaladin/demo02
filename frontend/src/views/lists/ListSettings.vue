@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { Setting, List, Grid } from '@element-plus/icons-vue'
+import { Setting, List, Grid, Tickets } from '@element-plus/icons-vue'
 import AppLayout from '../../components/AppLayout.vue'
 
 const route = useRoute()
@@ -29,5 +29,6 @@ const cards = [
   { label: '基本信息', route: 'info', icon: Setting },
   { label: '字段管理', route: 'fields', icon: List },
   { label: '视图管理', route: 'views', icon: Grid },
+  { label: '表单设置', route: 'form', icon: Tickets },
 ]
 </script>

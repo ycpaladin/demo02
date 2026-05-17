@@ -21,12 +21,15 @@ cd backend && ./venv/bin/python manage.py shell -c "
 from applications.models import Application
 app, created = Application.objects.get_or_create(
     key='default',
-    defaults={'name': '通用列表存储', 'url_prefix': '/', 'description': '默认应用空间'}
+    defaults={'name': '通用列表存储', 'description': '默认应用空间'}
 )
 "
 
 # Verify DB connection
 cd backend && python manage.py check --database default
+
+# Generate test data (100 fields + 100K records)
+cd backend && ./venv/bin/python load_test_data.py [list_id]
 ```
 
 ### Frontend (Vue 3 + TypeScript)
@@ -53,27 +56,29 @@ Four Django apps, all mounted under `/api/`:
 | App | Purpose |
 |-----|---------|
 | `core` | `BaseModel` (UUID PK + timestamps), `FieldType`, `FieldValidator` models; `FieldTypeRegistry` (cached singleton); `ValidationEngine` (generates DRF validators + frontend rules from field defs) |
-| `applications` | `Application` (tree via `parent` self-FK, recursive URL prefix), `Navigation` (menu items linking to lists or custom URLs) |
-| `metadata` | `ContentType` (field templates with inheritance via `parent`), `ContentTypeField`, `List`, `ListField`, `ListView`; `ContentTypeManager.resolve_fields()` recursively merges parent fields (child overrides parent by key) |
-| `data` | `DynamicTableBuilder` (creates/drops `dyn_{key}` tables with id + JSONB data column + timestamps), `QueryBuilder` (parses `key:op:value` filter strings into parameterized `data->>'key'` SQL), `SerializerFactory` (dynamically creates DRF Serializers with field validators and unique checks), `TrashView` (soft-delete + restore + permanent delete), `DynamicRecordView` (CRUD via `apps/{app_id}/lists/{list_id}/records/`) |
+| `applications` | `Application` (tree via `parent` self-FK), `Navigation` (menu items linking to lists or custom URLs) |
+| `metadata` | `ContentType` (field templates with inheritance via `parent`), `ContentTypeField`, `List`; `ContentTypeManager.resolve_fields()` recursively merges parent fields (child overrides parent by key). `List.schema` JSON field stores extension fields, views, and form layout |
+| `data` | `QueryBuilder` (parses `key:op:value` filter strings + JSON `where` with nested AND/OR; top-level OR auto-splits into UNION ALL), `SerializerFactory` (dynamically creates DRF Serializers with field validators and unique checks), `TrashView` (soft-delete + restore + permanent delete), `DynamicRecordView` (CRUD via `apps/{app_id}/lists/{list_id}/records/`) |
 
 **Key design decisions:**
-- **One dynamic table per list**: `dyn_{list.key}` with `id UUID`, `data JSONB`, `created_at`, `updated_at`
-- **JSONB queries**: all filtering/sorting done via `data->>'field_key'` — no DDL changes needed when fields change
-- **Soft delete**: lists use `is_deleted` flag on metadata row; records use `_is_deleted: true` inside the JSON data column
+- **One dynamic table per list**: `dyn_{list.key}` with `id UUID`, `data JSONB`, `is_deleted BOOLEAN NOT NULL DEFAULT FALSE`, `created_at`, `updated_at`
+- **JSONB queries**: all filtering/sorting done via `data->>'field_key'`; top-level OR conditions use UNION ALL to leverage per-field indexes
+- **Automatic field indexes**: when a field is added to a list, an index is auto-created on `(data->>'key')` (GIN trigram for text fields, btree for others); dropped when field is removed. Inherited fields indexed on list creation
+- **Soft delete**: lists use `is_deleted` flag on metadata row; records use `is_deleted = TRUE` real column (not JSONB), with partial index `WHERE is_deleted = FALSE`
 - **Dual validation**: `ValidationEngine.build_field()` generates DRF validators; `ValidationEngine.build_frontend_rules()` generates Element Plus form rules — both from the same field definition
 - **Content type inheritance**: `ContentTypeManager.resolve_fields()` recursively walks `parent` chain, child fields with same key override parent fields
+- **Schema-based config**: extension fields, views, and form layout stored in `List.schema` JSONField (no separate `list_fields`/`list_views` tables). GET returns merged inherited+extension fields; PUT accepts extension fields only and diffs by ID
 - **DRF pagination unwrapped**: the frontend axios interceptor detects `{count, results}` DRF responses and returns just `results` to callers
 
 ### Frontend (`frontend/`)
 
-Vue 3 + TypeScript + Element Plus + Vite. Vite proxies `/api` to `localhost:8000`.
+Vue 3 + TypeScript + Element Plus + Vite + vxe-table. Vite proxies `/api` to `localhost:8000`.
 
 #### Layout
 
 AppLayout.vue provides the shell: header with site name + "设置" dropdown, left sidebar driven by navigation API, main content via `<slot>`.
 
-Header dropdown items: 站点设置, 查看网站所有内容, 新建列表, 新建子站点.
+Header dropdown items: 列表设置 (when on a list page), 站点设置, 查看网站所有内容, 新建列表, 新建子站点.
 
 #### File structure
 
@@ -81,28 +86,33 @@ Header dropdown items: 站点设置, 查看网站所有内容, 新建列表, 新
 src/
 ├── api/index.ts          # axios instance, DRF pagination unwrapper, error flattener
 ├── api/{applications,fieldTypes,contentTypes,lists,records,trash}.ts
-├── types/index.ts        # All TypeScript interfaces
+├── types/index.ts        # All TypeScript interfaces (ListSchema, SchemaField, SchemaView, WhereNode, etc.)
 ├── utils/ruleEngine.ts   # Client-side validation rule builder from field definitions
 ├── router/index.ts       # All routes scoped under /apps/:appId
 ├── components/
 │   ├── AppLayout.vue     # Shell: sidebar + header with settings dropdown + slot
-│   ├── DynamicForm.vue   # Renders form fields from schema, applies validation rules
+│   ├── DynamicForm.vue   # Renders form fields from schema + layout groups (el-row/el-col)
 │   ├── DynamicSearchBar.vue  # Generates search inputs from searchable fields
-│   └── ViewTabs.vue      # Tag-based view switcher
+│   ├── FieldControl.vue  # Single field input (text/number/date/boolean/select), used by DynamicForm
+│   ├── FieldDesigner.vue # Reusable field CRUD table with type-specific config panels
+│   ├── WhereNodeEditor.vue   # Recursive WHERE condition editor (nested AND/OR groups)
+│   └── fields/           # Per-field-type config components (TextConfig, NumberConfig, etc.)
 └── views/
     ├── SiteOverview.vue  # "查看网站所有内容" — lists + child sites sorted by created_at
     ├── applications/
     │   └── AppList.vue
     ├── lists/
     │   ├── ListManagement.vue  # Default landing page for a site
-    │   ├── ListDesigner.vue    # List field designer
-    │   ├── ListData.vue        # Record table with search/filter/pagination
-    │   ├── RecordForm.vue      # Create / edit record (form-based)
-    │   ├── ListSettings.vue    # Card page: info / fields / views
-    │   └── ListInfoEdit.vue    # Edit list name, description, url
+    │   ├── ListDesigner.vue    # List field designer (unified save to schema)
+    │   ├── ListData.vue        # Record table (vxe-table) with view switcher + pagination
+    │   ├── RecordForm.vue      # Create / edit / view record (form-based, supports readonly mode)
+    │   ├── ListSettings.vue    # Card page: info / fields / views / form
+    │   ├── ListInfoEdit.vue    # Edit list name, description
+    │   ├── ListViewManager.vue # View CRUD with WHERE condition editor
+    │   └── FormLayoutEditor.vue # Form layout: groups, columns, field assignment
     └── settings/
         ├── SiteSettings.vue    # Card page: info / content-types / field-types / navigations / trash
-        ├── SiteInfoEdit.vue    # Edit site name, key, url_prefix, description
+        ├── SiteInfoEdit.vue
         ├── ContentTypeList.vue
         ├── ContentTypeDesigner.vue
         ├── FieldTypeList.vue
@@ -112,16 +122,19 @@ src/
 
 **Important frontend patterns:**
 - `getFormSchema(appId, listId)` returns field definitions + pre-built validation rules — the single source of truth for both form rendering and client-side validation
-- `RecordForm.vue` handles both create and edit (edit mode when `recordId` route param exists)
+- `getListSchema(appId, listId)` / `updateListSchema(appId, listId, data)` — unified read/write for extension fields, views, and form layout
+- `RecordForm.vue` handles create, edit, and view modes (via route name: `recordAdd`/`recordEdit`/`recordView`)
 - API modules are thin wrappers around the axios instance; the interceptor handles DRF pagination unwrapping
 - `FormSchema.rules[]` are Element Plus form rule objects, built server-side by `ValidationEngine.build_frontend_rules()`
 - Sidebar menu items come from the navigation API (`/api/apps/:appId/navigations/`), filtered by `visible=true`
+- View switching uses a dropdown in the action bar (last option: "编辑当前视图")
+- Pagination uses standard OFFSET/LIMIT; `is_deleted = FALSE` partial index keeps deep pages fast
 
 ### Database
 
 PostgreSQL via `psycopg2-binary`. Two categories of tables:
-1. **Metadata tables** (Django-managed): `applications`, `field_types`, `field_validators`, `content_types`, `content_type_fields`, `lists`, `list_fields`, `list_views`, `navigations`
-2. **Dynamic data tables**: `dyn_{list.key}` — created/dropped by `DynamicTableBuilder`, queried via raw SQL with `data->>'key'` JSONB operator
+1. **Metadata tables** (Django-managed): `applications`, `field_types`, `field_validators`, `content_types`, `content_type_fields`, `lists` (with `schema` JSONField), `navigations`
+2. **Dynamic data tables**: `dyn_{list.key}` — created on list creation, queried via raw SQL with `data->>'key'` JSONB operator. Each has `is_deleted BOOLEAN` real column with partial index
 
 Built-in seed data (`python manage.py seed_data`): 9 field types (text, number, date, boolean, long_text, select, multi_select, attachment, reference) and 4 validators (required, phone, email, id_card).
 

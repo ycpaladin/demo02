@@ -4,7 +4,7 @@ from django.db import connection
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from metadata.models import List, ListView
+from metadata.models import List
 from data.query_builder import QueryBuilder
 from data.serializer_factory import SerializerFactory
 
@@ -21,20 +21,32 @@ class DynamicRecordView(APIView):
         sort = request.query_params.get('sort', '')
         order = request.query_params.get('order', 'asc')
         filter_str = request.query_params.get('filter', '')
+        where_json = None
 
         view_key = request.query_params.get('view')
         if view_key:
-            view_obj = ListView.objects.filter(list=lst, url_key=view_key).first()
-            if view_obj:
-                view_config = view_obj.config or {}
-                if not sort and view_config.get('default_sort'):
-                    sort = view_config['default_sort']
-                if not filter_str and view_config.get('default_filter'):
-                    filter_str = view_config['default_filter']
-                if view_config.get('page_size'):
-                    page_size = view_config['page_size']
+            view_config = lst.get_view_by_key(view_key) or {}
+            if view_config:
+                if not sort:
+                    order_by = view_config.get('orderBy', [])
+                    if order_by:
+                        sort_parts = []
+                        for ob in order_by:
+                            sort_parts.append(f"{ob['field']}:{ob['sort'].lower()}")
+                        sort = ','.join(sort_parts)
+                if 'where' in view_config and not filter_str:
+                    where_json = view_config['where']
+                if view_config.get('default_page_size'):
+                    page_size = view_config['default_page_size']
 
-        result = QueryBuilder.execute_query(lst.table_name, filter_str, sort, order, page, page_size)
+        # 查询参数的 where 优先级高于视图
+        where_param = request.query_params.get('where')
+        if where_param:
+            where_json = json.loads(where_param)
+
+        result = QueryBuilder.execute_query(
+            lst.table_name, filter_str, sort, order, page, page_size, where_json,
+        )
         for row in result['results']:
             row['data'] = json.loads(row['data']) if isinstance(row['data'], str) else row['data']
             if row.get('created_at'):
@@ -100,11 +112,10 @@ class DynamicRecordDetailView(APIView):
         if not record:
             return Response({'detail': 'Not found'}, status=404)
         data = record['data'] or {}
-        data['_is_deleted'] = True
         data['_deleted_at'] = datetime.now().isoformat()
         with connection.cursor() as cursor:
             cursor.execute(
-                f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
+                f'UPDATE "{lst.table_name}" SET data = %s, is_deleted = TRUE, updated_at = NOW() WHERE id = %s',
                 [json.dumps(data, ensure_ascii=False, default=str), record_id]
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -112,7 +123,7 @@ class DynamicRecordDetailView(APIView):
 
 class DynamicRecordBatchView(APIView):
     def patch(self, request, app_id, list_id):
-        lst = List.objects.get(application_id=app_id, url=list_url, is_deleted=False)
+        lst = List.objects.get(application_id=app_id, id=list_id, is_deleted=False)
         record_ids = request.data.get('ids', [])
         field_key = request.data.get('field')
         value = request.data.get('value')

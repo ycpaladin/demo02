@@ -1,66 +1,103 @@
 <template>
   <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
-    <el-form-item
-      v-for="field in fields"
-      :key="field.key"
-      :label="field.name"
-      :prop="field.key"
-    >
-      <el-input
-        v-if="field.field_type === 'text' || field.field_type === 'long_text'"
-        v-model="formData[field.key]"
-        :type="field.field_type === 'long_text' ? 'textarea' : 'text'"
-        :rows="field.field_type === 'long_text' ? 6 : 1"
-        :placeholder="`请输入${field.name}`"
-      />
-      <el-input-number
-        v-else-if="field.field_type === 'number'"
-        v-model="formData[field.key]"
-        :min="field.config?.min"
-        :max="field.config?.max"
-      />
-      <el-date-picker
-        v-else-if="field.field_type === 'date'"
-        v-model="formData[field.key]"
-        type="date"
-        value-format="YYYY-MM-DD"
-        :placeholder="`请选择${field.name}`"
-      />
-      <el-switch v-else-if="field.field_type === 'boolean'" v-model="formData[field.key]" />
-      <el-select
-        v-else-if="field.field_type === 'select'"
-        v-model="formData[field.key]"
-        :placeholder="`请选择${field.name}`"
+    <!-- 有分组布局时按分组渲染 -->
+    <template v-if="hasLayout">
+      <template v-for="(group, gi) in formLayout.groups" :key="gi">
+        <el-divider v-if="group.name" :content-position="'left'">{{ group.name }}</el-divider>
+        <el-row :gutter="16">
+          <el-col
+            v-for="(gf, fi) in group.fields"
+            :key="gf.key"
+            :span="24 / group.columns * gf.col_span"
+          >
+            <el-form-item v-if="getFieldDef(gf.key)" :label="getFieldLabel(gf.key)" :prop="gf.key">
+              <slot name="field" :field="getFieldDef(gf.key)!" :value="formData[gf.key]" :readonly="readonly">
+                <FieldControl
+                  :field="getFieldDef(gf.key)!"
+                  :modelValue="formData[gf.key]"
+                  @update:modelValue="v => formData[gf.key] = v"
+                  :readonly="readonly"
+                />
+              </slot>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </template>
+      <!-- 未分配字段 -->
+      <template v-if="ungroupedFields.length">
+        <el-divider v-if="hasLayout" content-position="left">其他</el-divider>
+        <el-form-item
+          v-for="field in ungroupedFields"
+          :key="field.key"
+          :label="field.name"
+          :prop="field.key"
+        >
+          <FieldControl
+            :field="field"
+            :modelValue="formData[field.key]"
+            @update:modelValue="v => formData[field.key] = v"
+            :readonly="readonly"
+          />
+        </el-form-item>
+      </template>
+    </template>
+
+    <!-- 无分组时平铺渲染 -->
+    <template v-else>
+      <el-form-item
+        v-for="field in fields"
+        :key="field.key"
+        :label="field.name"
+        :prop="field.key"
       >
-        <el-option v-for="opt in (field.options || [])" :key="opt" :label="opt" :value="opt" />
-      </el-select>
-      <el-select
-        v-else-if="field.field_type === 'multi_select'"
-        v-model="formData[field.key]"
-        multiple
-        :placeholder="`请选择${field.name}`"
-      >
-        <el-option v-for="opt in (field.options || [])" :key="opt" :label="opt" :value="opt" />
-      </el-select>
-      <el-input v-else v-model="formData[field.key]" :placeholder="`请输入${field.name}`" />
-    </el-form-item>
+        <FieldControl
+          :field="field"
+          :modelValue="formData[field.key]"
+          @update:modelValue="v => formData[field.key] = v"
+          :readonly="readonly"
+        />
+      </el-form-item>
+    </template>
   </el-form>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import { buildRules } from '../utils/ruleEngine'
-import type { FormField } from '../types'
+import FieldControl from './FieldControl.vue'
+import type { FormField, SchemaForm } from '../types'
 import type { FormInstance } from 'element-plus'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   fields: FormField[]
   initialData: Record<string, unknown>
-}>()
+  readonly?: boolean
+  formLayout?: SchemaForm
+}>(), { readonly: false, formLayout: () => ({ groups: [] }) })
 
 const formRef = ref<FormInstance>()
 const formData = reactive<Record<string, unknown>>({ ...props.initialData })
 const formRules = reactive<Record<string, unknown>>({})
+
+const hasLayout = computed(() => props.formLayout?.groups?.length > 0)
+
+const groupedFieldKeys = computed(() => {
+  const keys = new Set<string>()
+  for (const g of props.formLayout.groups) {
+    for (const f of g.fields) keys.add(f.key)
+  }
+  return keys
+})
+
+const ungroupedFields = computed(() =>
+  props.fields.filter(f => !groupedFieldKeys.value.has(f.key))
+)
+
+const getFieldDef = (key: string): FormField | undefined =>
+  props.fields.find(f => f.key === key)
+
+const getFieldLabel = (key: string): string =>
+  getFieldDef(key)?.name || key
 
 watch(() => props.fields, (fields) => {
   for (const f of fields) {
@@ -71,8 +108,19 @@ watch(() => props.fields, (fields) => {
   }
 }, { immediate: true })
 
+watch(() => props.initialData, (data) => {
+  if (!data || Object.keys(data).length === 0) return
+  for (const key of Object.keys(formData)) {
+    delete formData[key]
+  }
+  for (const f of props.fields) {
+    formData[f.key] = data[f.key] !== undefined ? data[f.key] : (
+      f.field_type === 'multi_select' ? [] : f.field_type === 'boolean' ? false : ''
+    )
+  }
+})
+
 const validate = (): Promise<boolean> | undefined => formRef.value?.validate()
 const getData = (): Record<string, unknown> => ({ ...formData })
 defineExpose({ validate, getData })
-
 </script>

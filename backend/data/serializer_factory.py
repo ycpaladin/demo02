@@ -26,7 +26,7 @@ class SerializerFactory:
             from django.db import connection
             import uuid
             record_id = str(uuid.uuid4())
-            data = {**validated_data, '_is_deleted': False, '_deleted_at': None}
+            data = {**validated_data, '_deleted_at': None}
             with connection.cursor() as cursor:
                 cursor.execute(
                     f'INSERT INTO "{list_obj.table_name}" (id, data) VALUES (%s, %s)',
@@ -57,7 +57,7 @@ class SerializerFactory:
                     table = list_obj.table_name
                     with connection.cursor() as cursor:
                         cursor.execute(
-                            f"SELECT COUNT(*) FROM \"{table}\" WHERE data->>'{fk}' = %s AND (data->>'_is_deleted' IS NULL OR data->>'_is_deleted' = 'false')",
+                            f"SELECT COUNT(*) FROM \"{table}\" WHERE data->>'{fk}' = %s AND is_deleted = FALSE",
                             [str(value)]
                         )
                         row = cursor.fetchone()

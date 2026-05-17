@@ -6,9 +6,19 @@
 
 **Architecture:** Django REST Framework 后端提供 RESTful API + 核心引擎模块。Vue3/Element Plus 前端通过声明式规则引擎与后端共享校验逻辑。PostgreSQL 元数据表 + 每列表独立 JSONB 列存数据。
 
-**Tech Stack:** Python 3.11+ / Django 5.x / DRF / psycopg2-binary / Vue 3 / Element Plus / Vite / pinia
+**Tech Stack:** Python 3.11+ / Django 5.x / DRF / psycopg2-binary / Vue 3 / Element Plus / vxe-table / Vite / TypeScript
 
 **Database:** PostgreSQL @ 192.168.11.219:15432, user / @1Qazxsw2, appdb
+
+> **PLAN VS CURRENT STATE:** 以下为原始实现计划。实际实现与计划有以下关键差异：
+> - `ListField` / `ListView` 模型已删除，配置统一存储在 `List.schema` JSON 字段
+> - 动态表新增 `is_deleted BOOLEAN` 真列 + 部分索引，不再用 JSONB 内 `_is_deleted`
+> - 字段增减时自动创建/删除索引（文本 GIN trigram，其他 btree）
+> - `QueryBuilder` 支持 JSON `where` 嵌套 AND/OR，顶层 OR 自动拆为 UNION ALL
+> - 前端新增组件：`FieldControl.vue`、`WhereNodeEditor.vue`、`FieldDesigner.vue`
+> - 前端新增页面：`ListViewManager.vue`、`FormLayoutEditor.vue`
+> - 前端文件改为 TypeScript（`.ts` / `.vue` with `<script setup lang="ts">`）
+> - API 端点：列表 CRUD 用 ID 路由（不再用 url）；Schema 统一读写 `GET/PUT /apps/{appId}/lists/{listId}/schema/`
 
 ---
 

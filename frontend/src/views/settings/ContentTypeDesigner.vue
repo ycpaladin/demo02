@@ -39,6 +39,7 @@
         :fields="localFieldRows"
         :fieldTypes="fieldTypes"
         :referenceLists="referenceLists"
+        :appId="appId"
         @add="handleAdd"
         @update="handleUpdate"
         @delete="handleDelete"

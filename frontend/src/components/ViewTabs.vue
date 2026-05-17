@@ -15,10 +15,10 @@
 </template>
 
 <script setup lang="ts">
-import type { ListView } from '../types'
+import type { SchemaView } from '../types'
 
 defineProps<{
-  views: ListView[]
+  views: SchemaView[]
   activeKey: string
 }>()
 
