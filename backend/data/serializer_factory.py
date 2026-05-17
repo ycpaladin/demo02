@@ -29,7 +29,7 @@ class SerializerFactory:
             data = {**validated_data, '_is_deleted': False, '_deleted_at': None}
             with connection.cursor() as cursor:
                 cursor.execute(
-                    f"INSERT INTO [{list_obj.table_name}] (id, data) VALUES (%s, %s)",
+                    f'INSERT INTO "{list_obj.table_name}" (id, data) VALUES (%s, %s)',
                     [record_id, json.dumps(data, ensure_ascii=False, default=str)]
                 )
             data['id'] = record_id
@@ -43,7 +43,7 @@ class SerializerFactory:
             merged = {**existing_data, **validated_data}
             with connection.cursor() as cursor:
                 cursor.execute(
-                    f"UPDATE [{list_obj.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                    f'UPDATE "{list_obj.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                     [json.dumps(merged, ensure_ascii=False, default=str), instance['id']]
                 )
             merged['id'] = instance['id']
@@ -57,7 +57,7 @@ class SerializerFactory:
                     table = list_obj.table_name
                     with connection.cursor() as cursor:
                         cursor.execute(
-                            f"SELECT COUNT(*) FROM [{table}] WHERE JSON_VALUE(data, '$.{fk}') = %s AND (JSON_VALUE(data, '$._is_deleted') IS NULL OR JSON_VALUE(data, '$._is_deleted') = 'false')",
+                            f"SELECT COUNT(*) FROM \"{table}\" WHERE data->>'{fk}' = %s AND (data->>'_is_deleted' IS NULL OR data->>'_is_deleted' = 'false')",
                             [str(value)]
                         )
                         row = cursor.fetchone()

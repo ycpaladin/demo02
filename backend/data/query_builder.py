@@ -27,29 +27,29 @@ class QueryBuilder:
                 continue
             key, op, value = parts[0], parts[1], parts[2]
 
-            json_path = f"$.{key}"
+            json_path = key
 
             if op == 'isnull':
-                clauses.append(f"JSON_VALUE(data, '{json_path}') IS NULL")
+                clauses.append(f"data->>'{json_path}' IS NULL")
                 continue
 
             if op in ('in', 'nin'):
                 values = [v.strip() for v in value.split('|')]
                 placeholders = ','.join(['%s'] * len(values))
                 not_ = 'NOT' if op == 'nin' else ''
-                clauses.append(f"JSON_VALUE(data, '{json_path}') {not_} IN ({placeholders})")
+                clauses.append(f"data->>'{json_path}' {not_} IN ({placeholders})")
                 params.extend(values)
                 continue
 
             if op == 'contains':
-                clauses.append(f"JSON_VALUE(data, '{json_path}') LIKE %s")
+                clauses.append(f"data->>'{json_path}' LIKE %s")
                 params.append(f'%{value}%')
             elif op == 'startswith':
-                clauses.append(f"JSON_VALUE(data, '{json_path}') LIKE %s")
+                clauses.append(f"data->>'{json_path}' LIKE %s")
                 params.append(f'{value}%')
             else:
                 sql_op = cls.OP_MAP.get(op, '=')
-                clauses.append(f"JSON_VALUE(data, '{json_path}') {sql_op} %s")
+                clauses.append(f"data->>'{json_path}' {sql_op} %s")
                 params.append(value)
 
         where = ' AND '.join(clauses)
@@ -59,7 +59,7 @@ class QueryBuilder:
     def build_select(cls, table_name, filter_str='', sort='', order='asc', page=1, page_size=20):
         where, params = cls.build_filter_clause(filter_str)
 
-        deleted_filter = "(JSON_VALUE(data, '$._is_deleted') IS NULL OR JSON_VALUE(data, '$._is_deleted') = 'false')"
+        deleted_filter = "(data->>'_is_deleted' IS NULL OR data->>'_is_deleted' = 'false')"
         if where:
             where = f"{where} AND {deleted_filter}"
         else:
@@ -67,20 +67,19 @@ class QueryBuilder:
 
         direction = 'DESC' if order.lower() == 'desc' else 'ASC'
         if sort:
-            order_clause = f"ORDER BY JSON_VALUE(data, '$.{sort}') {direction}"
+            order_clause = f"ORDER BY data->>'{sort}' {direction}"
         else:
-            order_clause = f"ORDER BY id ASC"
+            order_clause = "ORDER BY id ASC"
 
         offset = (page - 1) * page_size
 
-        count_sql = f"SELECT COUNT(*) FROM [{table_name}] WHERE {where}"
+        count_sql = f'SELECT COUNT(*) FROM "{table_name}" WHERE {where}'
         select_sql = f"""
         SELECT id, data, created_at, updated_at
-        FROM [{table_name}]
+        FROM "{table_name}"
         WHERE {where}
         {order_clause}
-        OFFSET {offset} ROWS
-        FETCH NEXT {page_size} ROWS ONLY
+        OFFSET {offset} LIMIT {page_size}
         """
 
         return count_sql, select_sql, params

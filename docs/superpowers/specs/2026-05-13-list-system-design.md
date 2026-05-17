@@ -13,7 +13,7 @@
 1. 定义字段类型（内置 + 自定义）
 2. 将字段组合为"内容类型"（支持继承）
 3. 创建"列表"，绑定内容类型或独立定义字段
-4. 系统自动在 MSSQL 中创建物理数据表
+4. 系统自动在 PostgreSQL 中创建物理数据表
 5. 对列表数据进行增删改查、筛选排序分页、导入导出
 6. 提交数据时根据字段定义执行前后端双重校验
 7. 删除的数据进入回收站，可恢复或彻底删除
@@ -26,7 +26,7 @@
 |------|------|
 | 前端 | Vue 3 + TypeScript + Element Plus |
 | 后端 | Python(虚拟环境venv目录) + Django REST Framework |
-| 数据库 | MSSQL（元数据：普通关系表；数据：每列表独立建表，JSON 列存储字段值） |
+| 数据库 | PostgreSQL（元数据：普通关系表；数据：每列表独立建表，JSONB 列存储字段值） |
 | 权限 | 后续添加 |
 
 ---
@@ -127,18 +127,18 @@
 
 ## 四、数据模型
 
-### 4.1 元数据表（MSSQL 普通关系表）
+### 4.1 元数据表（PostgreSQL 关系表）
 
 #### applications
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID PK | |
-| name | nvarchar | 应用名称 |
-| key | nvarchar | 唯一标识 |
-| description | nvarchar | |
+| name | varchar | 应用名称 |
+| key | varchar | 唯一标识 |
+| description | varchar | |
 | parent | FK → self, nullable | 父应用 |
 | order | int | 排序 |
-| created_at / updated_at | datetime2 | |
+| created_at / updated_at | timestamptz | |
 
 > 已移除 `url_prefix` 字段，所有路由使用 UUID 定位。
 
@@ -146,36 +146,36 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID PK | |
-| name | nvarchar | 显示名称 |
-| key | nvarchar (唯一) | 标识符 |
-| description | nvarchar | |
-| icon | nvarchar | 图标 |
+| name | varchar | 显示名称 |
+| key | varchar (唯一) | 标识符 |
+| description | varchar | |
+| icon | varchar | 图标 |
 | builtin | bool | 是否内置 |
 | config_schema | JSON | 该字段类型支持的配置项定义 |
-| created_at / updated_at | datetime2 | |
+| created_at / updated_at | timestamptz | |
 
 #### field_validators
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID PK | |
-| name | nvarchar | 显示名称 |
-| key | nvarchar (唯一) | 标识符 |
-| description | nvarchar | |
+| name | varchar | 显示名称 |
+| key | varchar (唯一) | 标识符 |
+| description | varchar | |
 | builtin | bool | 是否内置 |
-| rule_type | nvarchar | regex / range / expression |
+| rule_type | varchar | regex / range / expression |
 | rule_config | JSON | 规则参数 |
-| error_message | nvarchar | 校验失败提示 |
+| error_message | varchar | 校验失败提示 |
 | created_at | datetime2 | |
 
 #### content_types
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID PK | |
-| name | nvarchar | 显示名称 |
-| key | nvarchar (唯一) | 标识符 |
-| description | nvarchar | |
+| name | varchar | 显示名称 |
+| key | varchar (唯一) | 标识符 |
+| description | varchar | |
 | parent | FK → self, nullable | 父内容类型 |
-| created_at / updated_at | datetime2 | |
+| created_at / updated_at | timestamptz | |
 
 #### content_type_fields
 | 字段 | 类型 | 说明 |
@@ -183,30 +183,30 @@
 | id | UUID PK | |
 | content_type | FK → content_types | 所属内容类型 |
 | field_type | FK → field_types | 字段类型 |
-| name | nvarchar | 字段显示名 |
-| key | nvarchar | 字段标识 |
+| name | varchar | 字段显示名 |
+| key | varchar | 字段标识 |
 | required | bool | 是否必填 |
 | unique | bool | 是否唯一 |
 | searchable | bool | 是否可搜索 |
-| search_type | nvarchar | fuzzy / range / exact |
+| search_type | varchar | fuzzy / range / exact |
 | order | int | 排序 |
 | config | JSON | 字段配置。通用键：`default_value`；引用字段：`reference_list`（目标列表 UUID）、`reference_field`（目标字段 key） |
 | validators | JSON | 关联的验证器 key 列表 |
-| created_at / updated_at | datetime2 | |
+| created_at / updated_at | timestamptz | |
 
 #### lists
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID PK | |
 | application | FK → applications | 所属应用 |
-| name | nvarchar | 列表名称 |
-| key | nvarchar (唯一) | 标识符 |
-| description | nvarchar | |
+| name | varchar | 列表名称 |
+| key | varchar (唯一) | 标识符 |
+| description | varchar | |
 | content_type | FK → content_types, nullable | 绑定的内容类型 |
-| table_name | nvarchar | 动态表名 dyn_{key} |
+| table_name | varchar | 动态表名 dyn_{key} |
 | is_deleted | bool (default false) | 软删除标记 |
 | deleted_at | datetime2, nullable | 删除时间 |
-| created_at / updated_at | datetime2 | |
+| created_at / updated_at | timestamptz | |
 
 > 已移除 `url` 字段，列表通过 UUID 路由访问。
 
@@ -216,8 +216,8 @@
 | id | UUID PK | |
 | list | FK → lists | 所属列表 |
 | field_type | FK → field_types | 字段类型 |
-| name | nvarchar | 字段显示名 |
-| key | nvarchar | 字段标识 |
+| name | varchar | 字段显示名 |
+| key | varchar | 字段标识 |
 | required / unique / searchable / search_type / order / config / validators | | 同 content_type_fields |
 
 #### list_views
@@ -225,7 +225,7 @@
 |------|------|------|
 | id | UUID PK | |
 | list | FK → lists | 所属列表 |
-| name | nvarchar | 视图名称 |
+| name | varchar | 视图名称 |
 | url_key | nvarchar | URL 标识，默认 "default" |
 | is_default | bool | 是否默认视图 |
 | config | JSON | 视图配置（visible_fields, default_sort, default_filter, page_size） |
@@ -237,11 +237,11 @@
 |------|------|------|
 | id | UUID PK | |
 | application | FK → applications | 所属应用 |
-| name | nvarchar | 菜单项名称 |
-| link_type | nvarchar | list / custom_url |
+| name | varchar | 菜单项名称 |
+| link_type | varchar | list / custom_url |
 | list | FK → lists, nullable | 关联的列表 |
 | custom_url | nvarchar, nullable | 自定义链接 |
-| icon | nvarchar, nullable | 图标 |
+| icon | varchar, nullable | 图标 |
 | parent | FK → self, nullable | 父菜单项（二级菜单） |
 | order | int | |
 | visible | bool | |
@@ -252,10 +252,10 @@
 
 ```sql
 CREATE TABLE dyn_{list.key} (
-    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    data NVARCHAR(MAX) NOT NULL,  -- JSON 存储所有字段值
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    data JSONB NOT NULL,  -- JSON 存储所有字段值
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
@@ -271,10 +271,10 @@ CREATE TABLE dyn_{list.key} (
 }
 ```
 
-**可选优化**：对唯一字段或常被筛选/排序的字段，创建计算列并建索引：
+**可选优化**：对唯一字段或常被筛选/排序的字段，创建生成列并建索引：
 ```sql
-ALTER TABLE dyn_blog ADD title_c AS JSON_VALUE(data, '$.title');
-CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE JSON_VALUE(data, '$._is_deleted') IS NULL OR JSON_VALUE(data, '$._is_deleted') = 'false';
+ALTER TABLE dyn_blog ADD COLUMN title_c TEXT GENERATED ALWAYS AS (data->>'title') STORED;
+CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE data->>'_is_deleted' IS NULL OR data->>'_is_deleted' = 'false';
 ```
 
 ---
@@ -426,7 +426,7 @@ CREATE UNIQUE INDEX IX_title ON dyn_blog(title_c) WHERE JSON_VALUE(data, '$._is_
 | `DynamicTableBuilder` | 创建/删除动态表，管理计算列和索引 |
 | `ValidationEngine` | 根据字段+验证器定义生成校验规则 |
 | `SerializerFactory` | 动态生成 DRF Serializer，注入校验 |
-| `QueryBuilder` | 构建 JSON_VALUE 筛选查询、排序、分页 |
+| `QueryBuilder` | 构建 data->>'key' JSONB 筛选查询、排序、分页 |
 | `ViewResolver` | 根据视图配置解析可见字段和默认参数 |
 | `TrashManager` | 软删除/恢复/真删除操作 |
 

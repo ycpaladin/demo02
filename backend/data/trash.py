@@ -16,7 +16,7 @@ class TrashView(APIView):
             with connection.cursor() as cursor:
                 try:
                     cursor.execute(
-                        f"SELECT id, data, updated_at FROM [{lst.table_name}] WHERE JSON_VALUE(data, '$._is_deleted') = 'true'"
+                        f"SELECT id, data, updated_at FROM \"{lst.table_name}\" WHERE data->>'_is_deleted' = 'true'"
                     )
                     columns = [col[0] for col in cursor.description]
                     for row in cursor.fetchall():
@@ -64,14 +64,14 @@ class TrashView(APIView):
             list_id = request.data.get('list_id')
             lst = List.objects.get(id=list_id, application_id=app_id)
             with connection.cursor() as cursor:
-                cursor.execute(f"SELECT data FROM [{lst.table_name}] WHERE id = %s", [item_id])
+                cursor.execute(f'SELECT data FROM "{lst.table_name}" WHERE id = %s', [item_id])
                 row = cursor.fetchone()
                 if row:
                     data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                     data['_is_deleted'] = False
                     data['_deleted_at'] = None
                     cursor.execute(
-                        f"UPDATE [{lst.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                        f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                         [json.dumps(data, ensure_ascii=False, default=str), item_id]
                     )
             return Response({'status': 'restored'})
@@ -90,7 +90,7 @@ class TrashView(APIView):
             list_id = request.query_params.get('list_id')
             lst = List.objects.get(id=list_id, application_id=app_id)
             with connection.cursor() as cursor:
-                cursor.execute(f"DELETE FROM [{lst.table_name}] WHERE id = %s", [item_id])
+                cursor.execute(f'DELETE FROM "{lst.table_name}" WHERE id = %s', [item_id])
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response({'detail': 'Invalid type'}, status=400)

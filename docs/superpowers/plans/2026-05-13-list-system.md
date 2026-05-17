@@ -4,11 +4,11 @@
 
 **Goal:** 构建元数据驱动的动态列表系统，支持字段类型管理、内容类型定义、列表创建、动态数据 CRUD、前后端双重校验、回收站。
 
-**Architecture:** Django REST Framework 后端提供 RESTful API + 核心引擎模块。Vue3/Element Plus 前端通过声明式规则引擎与后端共享校验逻辑。MSSQL 元数据表 + 每列表独立 JSON 列存数据。
+**Architecture:** Django REST Framework 后端提供 RESTful API + 核心引擎模块。Vue3/Element Plus 前端通过声明式规则引擎与后端共享校验逻辑。PostgreSQL 元数据表 + 每列表独立 JSONB 列存数据。
 
-**Tech Stack:** Python 3.11+ / Django 5.x / DRF / mssql-django / Vue 3 / Element Plus / Vite
+**Tech Stack:** Python 3.11+ / Django 5.x / DRF / psycopg2-binary / Vue 3 / Element Plus / Vite / pinia
 
-**Database:** MSSQL @ 10.6.3.15, sa / @1Qazxsw2, DataDb
+**Database:** PostgreSQL @ 192.168.11.219:15432, user / @1Qazxsw2, appdb
 
 ---
 
@@ -111,7 +111,7 @@ frontend/
 ```txt
 django>=5.0,<6.0
 djangorestframework>=3.15,<4.0
-mssql-django>=1.5,<2.0
+psycopg2-binary>=2.9,<3.0
 django-cors-headers>=4.0,<5.0
 openpyxl>=3.1,<4.0
 ```
@@ -199,16 +199,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'DataDb',
-        'HOST': '10.6.3.15',
-        'USER': 'sa',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'appdb',
+        'HOST': '192.168.11.219',
+        'USER': 'user',
         'PASSWORD': '@1Qazxsw2',
-        'PORT': '1433',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'extra_params': 'TrustServerCertificate=yes;',
-        },
+        'PORT': '15432',
     }
 }
 
@@ -280,7 +276,7 @@ Expected: "System check identified no issues (0 silenced)."
 
 ```bash
 git add backend/
-git commit -m "feat: initialize Django project with MSSQL connection"
+git commit -m "feat: initialize Django project with PostgreSQL connection"
 ```
 
 ---
@@ -1351,27 +1347,19 @@ class DynamicTableBuilder:
     @classmethod
     def create_table(cls, table_name):
         sql = f"""
-        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table_name}' AND xtype='U')
-        BEGIN
-            CREATE TABLE [{table_name}] (
-                id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-                data NVARCHAR(MAX) NOT NULL,
-                created_at DATETIME2 DEFAULT GETDATE(),
-                updated_at DATETIME2 DEFAULT GETDATE()
-            )
-        END
+        CREATE TABLE IF NOT EXISTS "{table_name}" (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            data JSONB NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
         """
         with connection.cursor() as cursor:
             cursor.execute(sql)
 
     @classmethod
     def drop_table(cls, table_name):
-        sql = f"""
-        IF EXISTS (SELECT * FROM sysobjects WHERE name='{table_name}' AND xtype='U')
-        BEGIN
-            DROP TABLE [{table_name}]
-        END
-        """
+        sql = f'DROP TABLE IF EXISTS "{table_name}"'
         with connection.cursor() as cursor:
             cursor.execute(sql)
 
@@ -1379,10 +1367,7 @@ class DynamicTableBuilder:
     def add_computed_column(cls, table_name, field_key):
         col_name = f"{field_key}_c"
         sql = f"""
-        IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name='{col_name}' AND Object_ID=Object_ID('{table_name}'))
-        BEGIN
-            ALTER TABLE [{table_name}] ADD [{col_name}] AS JSON_VALUE(data, '$.{field_key}')
-        END
+        ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" TEXT GENERATED ALWAYS AS (data->>'{field_key}') STORED
         """
         with connection.cursor() as cursor:
             cursor.execute(sql)
@@ -1422,29 +1407,29 @@ class QueryBuilder:
                 continue
             key, op, value = parts[0], parts[1], parts[2]
 
-            json_path = f"$.{key}"
+            json_path = key
 
             if op == 'isnull':
-                clauses.append(f"JSON_VALUE(data, '{json_path}') IS NULL")
+                clauses.append(f"data->>'{json_path}' IS NULL")
                 continue
 
             if op in ('in', 'nin'):
                 values = [v.strip() for v in value.split('|')]
                 placeholders = ','.join(['%s'] * len(values))
                 not_ = 'NOT' if op == 'nin' else ''
-                clauses.append(f"JSON_VALUE(data, '{json_path}') {not_} IN ({placeholders})")
+                clauses.append(f"data->>'{json_path}' {not_} IN ({placeholders})")
                 params.extend(values)
                 continue
 
             if op == 'contains':
-                clauses.append(f"JSON_VALUE(data, '{json_path}') LIKE %s")
+                clauses.append(f"data->>'{json_path}' LIKE %s")
                 params.append(f'%{value}%')
             elif op == 'startswith':
-                clauses.append(f"JSON_VALUE(data, '{json_path}') LIKE %s")
+                clauses.append(f"data->>'{json_path}' LIKE %s")
                 params.append(f'{value}%')
             else:
                 sql_op = cls.OP_MAP.get(op, '=')
-                clauses.append(f"JSON_VALUE(data, '{json_path}') {sql_op} %s")
+                clauses.append(f"data->>'{json_path}' {sql_op} %s")
                 params.append(value)
 
         where = ' AND '.join(clauses)
@@ -1455,7 +1440,7 @@ class QueryBuilder:
         where, params = cls.build_filter_clause(filter_str)
 
         # Always filter out soft-deleted records
-        deleted_filter = "(JSON_VALUE(data, '$._is_deleted') IS NULL OR JSON_VALUE(data, '$._is_deleted') = 'false')"
+        deleted_filter = "(data->>'_is_deleted' IS NULL OR data->>'_is_deleted' = 'false')"
         if where:
             where = f"{where} AND {deleted_filter}"
         else:
@@ -1464,18 +1449,17 @@ class QueryBuilder:
         order_clause = ''
         if sort:
             direction = 'DESC' if order.lower() == 'desc' else 'ASC'
-            order_clause = f"ORDER BY JSON_VALUE(data, '$.{sort}') {direction}"
+            order_clause = f"ORDER BY data->>'{sort}' {direction}"
 
         offset = (page - 1) * page_size
 
-        count_sql = f"SELECT COUNT(*) FROM [{table_name}] WHERE {where}"
+        count_sql = f'SELECT COUNT(*) FROM "{table_name}" WHERE {where}'
         select_sql = f"""
         SELECT id, data, created_at, updated_at
-        FROM [{table_name}]
+        FROM "{table_name}"
         WHERE {where}
         {order_clause}
-        OFFSET {offset} ROWS
-        FETCH NEXT {page_size} ROWS ONLY
+        OFFSET {offset} LIMIT {page_size}
         """
 
         return count_sql, select_sql, params
@@ -1555,7 +1539,7 @@ class SerializerFactory:
             data = {**validated_data, '_is_deleted': False, '_deleted_at': None}
             with connection.cursor() as cursor:
                 cursor.execute(
-                    f"INSERT INTO [{list_obj.table_name}] (id, data) VALUES (%s, %s)",
+                    f'INSERT INTO "{list_obj.table_name}" (id, data) VALUES (%s, %s)',
                     [record_id, json.dumps(data, ensure_ascii=False, default=str)]
                 )
             data['id'] = record_id
@@ -1568,7 +1552,7 @@ class SerializerFactory:
                 merged = {**merged['data'], **validated_data}
             with connection.cursor() as cursor:
                 cursor.execute(
-                    f"UPDATE [{list_obj.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                    f'UPDATE "{list_obj.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                     [json.dumps(merged, ensure_ascii=False, default=str), instance['id']]
                 )
             merged['id'] = instance['id']
@@ -1583,7 +1567,7 @@ class SerializerFactory:
                     table = list_obj.table_name
                     with connection.cursor() as cursor:
                         cursor.execute(
-                            f"SELECT COUNT(*) FROM [{table}] WHERE JSON_VALUE(data, '$.{fk}') = %s AND (JSON_VALUE(data, '$._is_deleted') IS NULL OR JSON_VALUE(data, '$._is_deleted') = 'false')",
+                            f"SELECT COUNT(*) FROM \"{table}\" WHERE data->>'{fk}' = %s AND (data->>'_is_deleted' IS NULL OR data->>'_is_deleted' = 'false')",
                             [str(value)]
                         )
                         row = cursor.fetchone()
@@ -1672,7 +1656,7 @@ class DynamicRecordDetailView(APIView):
     def _get_record(self, table_name, record_id):
         with connection.cursor() as cursor:
             cursor.execute(
-                f"SELECT id, data, created_at, updated_at FROM [{table_name}] WHERE id = %s",
+                f'SELECT id, data, created_at, updated_at FROM "{table_name}" WHERE id = %s',
                 [record_id]
             )
             columns = [col[0] for col in cursor.description]
@@ -1718,7 +1702,7 @@ class DynamicRecordDetailView(APIView):
         data['_deleted_at'] = datetime.now().isoformat()
         with connection.cursor() as cursor:
             cursor.execute(
-                f"UPDATE [{lst.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                 [json.dumps(data, ensure_ascii=False, default=str), record_id]
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1737,14 +1721,14 @@ class DynamicRecordBatchView(APIView):
         with connection.cursor() as cursor:
             for rid in record_ids:
                 cursor.execute(
-                    f"SELECT data FROM [{lst.table_name}] WHERE id = %s", [rid]
+                    f'SELECT data FROM "{lst.table_name}" WHERE id = %s', [rid]
                 )
                 row = cursor.fetchone()
                 if row:
                     data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                     data[field_key] = value
                     cursor.execute(
-                        f"UPDATE [{lst.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                        f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                         [json.dumps(data, ensure_ascii=False, default=str), rid]
                     )
 
@@ -1802,7 +1786,7 @@ class TrashView(APIView):
             with connection.cursor() as cursor:
                 try:
                     cursor.execute(
-                        f"SELECT id, data, updated_at FROM [{lst.table_name}] WHERE JSON_VALUE(data, '$._is_deleted') = 'true'"
+                        f"SELECT id, data, updated_at FROM \"{lst.table_name}\" WHERE data->>'_is_deleted' = 'true'"
                     )
                     columns = [col[0] for col in cursor.description]
                     for row in cursor.fetchall():
@@ -1853,14 +1837,14 @@ class TrashView(APIView):
             list_id = request.data.get('list_id')
             lst = List.objects.get(id=list_id, application_id=app_id)
             with connection.cursor() as cursor:
-                cursor.execute(f"SELECT data FROM [{lst.table_name}] WHERE id = %s", [item_id])
+                cursor.execute(f'SELECT data FROM "{lst.table_name}" WHERE id = %s', [item_id])
                 row = cursor.fetchone()
                 if row:
                     data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                     data['_is_deleted'] = False
                     data['_deleted_at'] = None
                     cursor.execute(
-                        f"UPDATE [{lst.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                        f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                         [json.dumps(data, ensure_ascii=False, default=str), item_id]
                     )
             return Response({'status': 'restored'})
@@ -1880,7 +1864,7 @@ class TrashView(APIView):
             list_id = request.query_params.get('list_id')
             lst = List.objects.get(id=list_id, application_id=app_id)
             with connection.cursor() as cursor:
-                cursor.execute(f"DELETE FROM [{lst.table_name}] WHERE id = %s", [item_id])
+                cursor.execute(f'DELETE FROM "{lst.table_name}" WHERE id = %s', [item_id])
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response({'detail': 'Invalid type'}, status=400)

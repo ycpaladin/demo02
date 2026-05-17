@@ -50,15 +50,12 @@ class ListViewSet(viewsets.ModelViewSet):
         from django.db import connection
         table_name = instance.table_name
         sql = f"""
-        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table_name}' AND xtype='U')
-        BEGIN
-            CREATE TABLE [{table_name}] (
-                id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-                data NVARCHAR(MAX) NOT NULL,
-                created_at DATETIME2 DEFAULT GETDATE(),
-                updated_at DATETIME2 DEFAULT GETDATE()
-            )
-        END
+        CREATE TABLE IF NOT EXISTS "{table_name}" (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            data JSONB NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
         """
         with connection.cursor() as cursor:
             cursor.execute(sql)

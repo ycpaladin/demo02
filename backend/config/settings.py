@@ -57,16 +57,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'DataDb',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'appdb',
         'HOST': '192.168.11.219',
-        'USER': 'sa',
+        'USER': 'user',
         'PASSWORD': '@1Qazxsw2',
-        'PORT': '1433',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'extra_params': 'TrustServerCertificate=yes;',
-        },
+        'PORT': '15432',
     }
 }
 

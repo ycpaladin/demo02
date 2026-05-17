@@ -44,7 +44,7 @@ cd frontend && npm run build
 
 ## Architecture
 
-This is a **metadata-driven dynamic list system** — users define field types, content types, and lists through a UI; the system auto-generates MSSQL tables and provides CRUD with dual frontend+backend validation. No coding required to create new data collections.
+This is a **metadata-driven dynamic list system** — users define field types, content types, and lists through a UI; the system auto-generates PostgreSQL tables and provides CRUD with dual frontend+backend validation. No coding required to create new data collections.
 
 ### Backend (`backend/`)
 
@@ -55,11 +55,11 @@ Four Django apps, all mounted under `/api/`:
 | `core` | `BaseModel` (UUID PK + timestamps), `FieldType`, `FieldValidator` models; `FieldTypeRegistry` (cached singleton); `ValidationEngine` (generates DRF validators + frontend rules from field defs) |
 | `applications` | `Application` (tree via `parent` self-FK, recursive URL prefix), `Navigation` (menu items linking to lists or custom URLs) |
 | `metadata` | `ContentType` (field templates with inheritance via `parent`), `ContentTypeField`, `List`, `ListField`, `ListView`; `ContentTypeManager.resolve_fields()` recursively merges parent fields (child overrides parent by key) |
-| `data` | `DynamicTableBuilder` (creates/drops `dyn_{key}` tables with id + JSON data column + timestamps), `QueryBuilder` (parses `key:op:value` filter strings into parameterized `JSON_VALUE` SQL), `SerializerFactory` (dynamically creates DRF Serializers with field validators and unique checks), `TrashView` (soft-delete + restore + permanent delete), `DynamicRecordView` (CRUD via `apps/{app_id}/lists/{list_url}/records/`) |
+| `data` | `DynamicTableBuilder` (creates/drops `dyn_{key}` tables with id + JSONB data column + timestamps), `QueryBuilder` (parses `key:op:value` filter strings into parameterized `data->>'key'` SQL), `SerializerFactory` (dynamically creates DRF Serializers with field validators and unique checks), `TrashView` (soft-delete + restore + permanent delete), `DynamicRecordView` (CRUD via `apps/{app_id}/lists/{list_id}/records/`) |
 
 **Key design decisions:**
-- **One dynamic table per list**: `dyn_{list.key}` with `id UNIQUEIDENTIFIER`, `data NVARCHAR(MAX)` (JSON), `created_at`, `updated_at`
-- **JSON_VALUE queries**: all filtering/sorting done via `JSON_VALUE(data, '$.field_key')` — no DDL changes needed when fields change
+- **One dynamic table per list**: `dyn_{list.key}` with `id UUID`, `data JSONB`, `created_at`, `updated_at`
+- **JSONB queries**: all filtering/sorting done via `data->>'field_key'` — no DDL changes needed when fields change
 - **Soft delete**: lists use `is_deleted` flag on metadata row; records use `_is_deleted: true` inside the JSON data column
 - **Dual validation**: `ValidationEngine.build_field()` generates DRF validators; `ValidationEngine.build_frontend_rules()` generates Element Plus form rules — both from the same field definition
 - **Content type inheritance**: `ContentTypeManager.resolve_fields()` recursively walks `parent` chain, child fields with same key override parent fields
@@ -119,9 +119,9 @@ src/
 
 ### Database
 
-MSSQL via `mssql-django`. Two categories of tables:
+PostgreSQL via `psycopg2-binary`. Two categories of tables:
 1. **Metadata tables** (Django-managed): `applications`, `field_types`, `field_validators`, `content_types`, `content_type_fields`, `lists`, `list_fields`, `list_views`, `navigations`
-2. **Dynamic data tables**: `dyn_{list.key}` — created/dropped by `DynamicTableBuilder`, queried via raw SQL with `JSON_VALUE`
+2. **Dynamic data tables**: `dyn_{list.key}` — created/dropped by `DynamicTableBuilder`, queried via raw SQL with `data->>'key'` JSONB operator
 
 Built-in seed data (`python manage.py seed_data`): 9 field types (text, number, date, boolean, long_text, select, multi_select, attachment, reference) and 4 validators (required, phone, email, id_card).
 

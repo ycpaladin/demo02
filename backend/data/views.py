@@ -60,7 +60,7 @@ class DynamicRecordDetailView(APIView):
     def _get_record(self, table_name, record_id):
         with connection.cursor() as cursor:
             cursor.execute(
-                f"SELECT id, data, created_at, updated_at FROM [{table_name}] WHERE id = %s",
+                f'SELECT id, data, created_at, updated_at FROM "{table_name}" WHERE id = %s',
                 [record_id]
             )
             columns = [col[0] for col in cursor.description]
@@ -104,7 +104,7 @@ class DynamicRecordDetailView(APIView):
         data['_deleted_at'] = datetime.now().isoformat()
         with connection.cursor() as cursor:
             cursor.execute(
-                f"UPDATE [{lst.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                 [json.dumps(data, ensure_ascii=False, default=str), record_id]
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -122,13 +122,13 @@ class DynamicRecordBatchView(APIView):
 
         with connection.cursor() as cursor:
             for rid in record_ids:
-                cursor.execute(f"SELECT data FROM [{lst.table_name}] WHERE id = %s", [rid])
+                cursor.execute(f'SELECT data FROM "{lst.table_name}" WHERE id = %s', [rid])
                 row = cursor.fetchone()
                 if row:
                     data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                     data[field_key] = value
                     cursor.execute(
-                        f"UPDATE [{lst.table_name}] SET data = %s, updated_at = GETDATE() WHERE id = %s",
+                        f'UPDATE "{lst.table_name}" SET data = %s, updated_at = NOW() WHERE id = %s',
                         [json.dumps(data, ensure_ascii=False, default=str), rid]
                     )
         return Response({'updated': len(record_ids)})
